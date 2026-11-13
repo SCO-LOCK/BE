@@ -1,24 +1,85 @@
-# Compiled class file
+# Java 컴파일 및 패키지 산출물
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
 *.jar
 *.war
 *.nar
 *.ear
+
+# 압축 파일
 *.zip
 *.tar.gz
 *.rar
 
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
+# 로그 및 JVM 진단 파일
+*.log
 hs_err_pid*
 replay_pid*
+.attach_pid*
+
+# 빌드 디렉터리 (소스 내부의 bin, build 디렉터리는 추적)
+bin
+build
+out
+target
+lib/
+!/**/src/**/bin
+!/**/src/**/build
+
+# Gradle 캐시
+.gradle
+.gradletasknamecache
+
+# Maven 생성 파일
+dependency-reduced-pom.xml
+interpolated*.xml
+.flattened-pom.xml
+
+# IntelliJ IDEA 설정
+.idea
+*.iml
+*.ipr
+*.iws
+
+# Eclipse 및 Spring Tool Suite 설정
+.classpath
+.factorypath
+.metadata
+.project
+.recommenders
+.settings
+.springBeans
+.sts4-cache
+
+# Visual Studio Code 설정
+.vscode
+
+# 기타 Java 개발 도구
+*.ctxt
+.mtj.tmp/
+
+# 편집기 임시 및 백업 파일
+*#
+*.sw?
+*~
+.#*
+
+# macOS 시스템 파일
+.DS_Store
+
+# 문서 및 사이트 생성 파일
+.*.md.html
+_site/
+
+# 로컬 작업 디렉터리
+/code
+
+# 메시지 브로커 및 데이터베이스 데이터
+activemq-data
+dump.rdb
+overridedb.*
+
+# 배포 및 비밀 설정
+.env
+.env.*
+!.env.example
+!.env.*.example
