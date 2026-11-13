@@ -74,6 +74,7 @@ _site/
 /code
 
 # 메시지 브로커 및 데이터베이스 데이터
+/.local/
 activemq-data
 dump.rdb
 overridedb.*
