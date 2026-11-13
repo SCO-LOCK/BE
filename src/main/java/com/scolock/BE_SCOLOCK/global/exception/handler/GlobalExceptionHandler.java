@@ -1,86 +1,130 @@
 package com.scolock.BE_SCOLOCK.global.exception.handler;
 
+import com.scolock.BE_SCOLOCK.global.apiPayload.ApiResponse;
+import com.scolock.BE_SCOLOCK.global.apiPayload.code.ErrorReasonDTO;
+import com.scolock.BE_SCOLOCK.global.apiPayload.code.status.ErrorStatus;
 import com.scolock.BE_SCOLOCK.global.exception.GeneralException;
+import jakarta.validation.ConstraintViolationException;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @Slf4j
 @RestControllerAdvice
-public class GlobalExceptionHandler {
+public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
-    // =========================================================================
-    // 1. 커스텀 비즈니스 예외 처리 (우리가 직접 throw new GeneralException 한 경우)
-    // =========================================================================
+    // HTTP 공통 오류만 명시적으로 매핑하여 도메인별 오류 코드와 구분한다.
+    private static final Map<Integer, ErrorStatus> COMMON_HTTP_ERRORS = Map.ofEntries(
+            Map.entry(400, ErrorStatus._BAD_REQUEST),
+            Map.entry(401, ErrorStatus._UNAUTHORIZED),
+            Map.entry(403, ErrorStatus._FORBIDDEN),
+            Map.entry(404, ErrorStatus._NOT_FOUND),
+            Map.entry(405, ErrorStatus._METHOD_NOT_ALLOWED),
+            Map.entry(406, ErrorStatus._NOT_ACCEPTABLE),
+            Map.entry(413, ErrorStatus._CONTENT_TOO_LARGE),
+            Map.entry(415, ErrorStatus._UNSUPPORTED_MEDIA_TYPE),
+            Map.entry(500, ErrorStatus._INTERNAL_SERVER_ERROR),
+            Map.entry(503, ErrorStatus._SERVICE_UNAVAILABLE));
+
     @ExceptionHandler(GeneralException.class)
-    public ResponseEntity<ApiResponse<Object>> handleGeneralException(GeneralException e, HttpServletRequest request) {
-        ErrorReasonDTO errorReason = e.getErrorReasonHttpStatus();
-
-        // 로그 기록 (필요 시 주석 해제하여 사용)
-        // log.warn("비즈니스 예외 발생 - URI: {}, Code: {}", request.getRequestURI(), errorReason.getCode());
-
-        return ResponseEntity
-                .status(errorReason.getHttpStatus())
-                .body(ApiResponse.onFailure(errorReason.getCode(), errorReason.getMessage(), null));
+    public ResponseEntity<ApiResponse<Void>> handleGeneralException(GeneralException exception) {
+        ErrorReasonDTO reason = exception.getErrorReasonHttpStatus();
+        if (reason.getHttpStatus().is5xxServerError()) {
+            log.error("Application request processing error", exception);
+        }
+        return ResponseEntity.status(reason.getHttpStatus())
+                .body(ApiResponse.onFailure(reason.getCode(), reason.getMessage(), null));
     }
 
-    // =========================================================================
-    // 2. DTO 파라미터 유효성 검사 실패 (@Valid, @RequestBody 사용 시)
-    // =========================================================================
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<Map<String, String>>> handleMethodArgumentNotValidException(
-            MethodArgumentNotValidException e, HttpServletRequest request) {
-
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiResponse<Map<String, String>>> handleConstraintViolationException(
+            ConstraintViolationException exception) {
         Map<String, String> errors = new LinkedHashMap<>();
+        exception.getConstraintViolations().forEach(violation -> addError(
+                errors, violation.getPropertyPath().toString(), violation.getMessage()));
+        ErrorReasonDTO reason = ErrorStatus._BAD_REQUEST.getReasonHttpStatus();
+        return ResponseEntity.status(reason.getHttpStatus())
+                .body(ApiResponse.onFailure(reason.getCode(), reason.getMessage(), errors));
+    }
 
-        // 어떤 필드에서 어떤 에러가 났는지 모두 수집 (예: "email" -> "이메일 형식이 아닙니다.")
-        for (FieldError fieldError : e.getBindingResult().getFieldErrors()) {
-            String fieldName = fieldError.getField();
-            String errorMessage = Optional.ofNullable(fieldError.getDefaultMessage()).orElse("잘못된 입력입니다.");
-            // 동일한 필드에 여러 에러가 있을 경우 콤마로 연결
-            errors.merge(fieldName, errorMessage, (existing, newMsg) -> existing + ", " + newMsg);
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
+        log.error("Unexpected request processing error", exception);
+        ErrorReasonDTO reason = ErrorStatus._INTERNAL_SERVER_ERROR.getReasonHttpStatus();
+        return ResponseEntity.status(reason.getHttpStatus())
+                .body(ApiResponse.onFailure(reason.getCode(), reason.getMessage(), null));
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException exception, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        Map<String, String> errors = new LinkedHashMap<>();
+        for (ObjectError error : exception.getBindingResult().getAllErrors()) {
+            String field = error instanceof FieldError fieldError ? fieldError.getField() : error.getObjectName();
+            addError(errors, field, error.getDefaultMessage());
+        }
+        return handleExceptionInternal(exception, failure(status, errors), headers, status, request);
+    }
+
+    @Override
+    protected ResponseEntity<Object> handleHandlerMethodValidationException(
+            HandlerMethodValidationException exception, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        // 반환값 검증 실패는 서버 오류이므로 내부 검증 내용을 응답에 노출하지 않는다.
+        if (exception.isForReturnValue()) {
+            return handleExceptionInternal(exception, null, headers, status, request);
         }
 
-        ErrorReasonDTO errorReason = ErrorStatus._BAD_REQUEST.getReasonHttpStatus();
-
-        return ResponseEntity
-                .status(errorReason.getHttpStatus())
-                .body(ApiResponse.onFailure(errorReason.getCode(), errorReason.getMessage(), errors));
+        Map<String, String> errors = new LinkedHashMap<>();
+        exception.getParameterValidationResults().forEach(result -> {
+            String parameterName = result.getMethodParameter().getParameterName();
+            String parameter = parameterName != null ? parameterName
+                    : "arg" + result.getMethodParameter().getParameterIndex();
+            result.getResolvableErrors().forEach(error -> {
+                String field = error instanceof FieldError fieldError ? fieldError.getField() : parameter;
+                addError(errors, field, error.getDefaultMessage());
+            });
+        });
+        exception.getCrossParameterValidationResults().forEach(error ->
+                addError(errors, "parameters", error.getDefaultMessage()));
+        return handleExceptionInternal(exception, failure(status, errors), headers, status, request);
     }
 
-    // =========================================================================
-    // 3. URI 변수 / 쿼리 파라미터 유효성 검사 실패 (@Validated, @PathVariable, @RequestParam)
-    // =========================================================================
-    @ExceptionHandler(ConstraintViolationException.class)
-    public ResponseEntity<ApiResponse<String>> handleConstraintViolationException(
-            ConstraintViolationException e, HttpServletRequest request) {
-
-        // 여러 에러 중 첫 번째 에러 메시지만 깔끔하게 추출 (예: "path variable id는 1 이상이어야 합니다.")
-        String errorMessage = e.getConstraintViolations().stream()
-                .map(violation -> violation.getMessage())
-                .findFirst()
-                .orElse("유효하지 않은 파라미터입니다.");
-
-        ErrorReasonDTO errorReason = ErrorStatus._BAD_REQUEST.getReasonHttpStatus();
-
-        return ResponseEntity
-                .status(errorReason.getHttpStatus())
-                .body(ApiResponse.onFailure(errorReason.getCode(), errorReason.getMessage(), errorMessage));
+    @Override
+    protected ResponseEntity<Object> handleExceptionInternal(
+            Exception exception, Object body, HttpHeaders headers,
+            HttpStatusCode status, WebRequest request) {
+        if (status.is5xxServerError()) {
+            log.error("Spring MVC request processing error", exception);
+        }
+        Object response = body instanceof ApiResponse<?> ? body : failure(status, null);
+        return super.handleExceptionInternal(exception, response, headers, status, request);
     }
 
-    // =========================================================================
-    // 4. 그 외 서버 내부에서 발생하는 모든 시스템 에러
-    // =========================================================================
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Object>> handleException(Exception e, HttpServletRequest request) {
-        // 서버 콘솔에는 에러의 원인(StackTrace)을 상세히 출력하여 개발자가 버그를 잡을 수 있게 함
-        log.error("서버 내부 오류 발생 - URI: {}", request.getRequestURI(), e);
+    private <T> ApiResponse<T> failure(HttpStatusCode status, T data) {
+        ErrorStatus commonError = COMMON_HTTP_ERRORS.get(status.value());
+        if (commonError != null) {
+            return ApiResponse.onFailure(commonError.getCode(), commonError.getMessage(), data);
+        }
+        String message = status.is5xxServerError()
+                ? ErrorStatus._INTERNAL_SERVER_ERROR.getMessage() : "요청을 처리할 수 없습니다.";
+        return ApiResponse.onFailure("COMMON" + status.value(), message, data);
+    }
 
-        ErrorReasonDTO errorReason = ErrorStatus._INTERNAL_SERVER_ERROR.getReasonHttpStatus();
-
-        // 프론트엔드로는 내부 구조(DB명, 쿼리 등)가 노출되지 않도록 '안전한 공통 메시지'만 전달
-        return ResponseEntity
-                .status(errorReason.getHttpStatus())
-                .body(ApiResponse.onFailure(errorReason.getCode(), errorReason.getMessage(), null));
+    private void addError(Map<String, String> errors, String field, String message) {
+        String errorMessage = message != null ? message : "유효하지 않은 값입니다.";
+        errors.merge(field, errorMessage, (existing, additional) -> existing + ", " + additional);
     }
 }
