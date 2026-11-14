@@ -1,0 +1,173 @@
+
+Project SCOLOCK {
+  database_type: 'MySQL'
+  Note: 'SCO/LOCK 1차 MVP'
+}
+
+// ======================================
+// 1. 사용자 (카카오 로그인)
+// ======================================
+
+Table users {
+  id bigint [pk, increment]
+  kakao_id bigint [not null, unique, note: '카카오 앱 사용자 고유 ID']
+  email varchar(254) [note: '선택 정보, 로그인 식별에 사용하지 않음']
+  display_name varchar(100)
+  profile_image_url varchar(1024)
+  last_login_at datetime(3)
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  updated_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  Note: '카카오 OAuth2 로그인 사용자'
+}
+
+// ======================================
+// 2. 프로젝트
+// ======================================
+
+Table projects {
+  id bigint [pk, increment]
+  owner_id bigint [not null]
+  name varchar(150) [not null]
+  client_name varchar(150)
+  description text
+  status varchar(16) [not null, default: 'ACTIVE', note: 'ACTIVE, ARCHIVED']
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  updated_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    (owner_id, created_at) [name: 'idx_projects_owner_created']
+  }
+
+  Note: '사용자가 생성한 프로젝트'
+}
+
+// ======================================
+// 3. 제작 기준 버전
+// ======================================
+
+Table criteria_versions {
+  id bigint [pk, increment]
+  project_id bigint [not null]
+  version_no int [not null]
+  criteria_text longtext
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    (project_id, version_no) [unique, name: 'uk_criteria_project_version']
+  }
+
+  Note: '프로젝트별 제작 기준과 변경 이력'
+}
+
+// ======================================
+// 4. 제작 기준 첨부파일
+// ======================================
+
+Table criteria_files {
+  id bigint [pk, increment]
+  criteria_version_id bigint [not null]
+  storage_key varchar(512) [not null]
+  original_filename varchar(255) [not null]
+  mime_type varchar(120) [not null]
+  file_size_bytes bigint [not null]
+  extraction_status varchar(16) [not null, default: 'PENDING', note: 'PENDING, COMPLETED, FAILED']
+  extracted_text longtext
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    criteria_version_id [name: 'idx_criteria_files_version']
+  }
+
+  Note: '제작 기준 첨부파일 및 텍스트 추출 결과'
+}
+
+// ======================================
+// 5. 클라이언트 요청사항
+// ======================================
+
+Table client_requests {
+  id bigint [pk, increment]
+  project_id bigint [not null]
+  request_text longtext [not null]
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    (project_id, created_at) [name: 'idx_client_requests_project_created']
+  }
+
+  Note: '클라이언트의 신규 요청사항'
+}
+
+// ======================================
+// 6. AI 분석 실행 기록
+// ======================================
+
+Table analysis_runs {
+  id bigint [pk, increment]
+  client_request_id bigint [not null]
+  criteria_version_id bigint [not null]
+  status varchar(16) [not null, default: 'PENDING', note: 'PENDING, PROCESSING, COMPLETED, FAILED']
+  result_json json
+  model_name varchar(100)
+  prompt_version varchar(40)
+  error_code varchar(60)
+  error_message varchar(500)
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  started_at datetime(3)
+  finished_at datetime(3)
+
+  indexes {
+    (client_request_id, created_at) [name: 'idx_analysis_request_created']
+    criteria_version_id [name: 'idx_analysis_criteria']
+    (status, created_at) [name: 'idx_analysis_status_created']
+  }
+
+  Note: 'AI 분석 실행 상태와 결과 기록'
+}
+
+// ======================================
+// 7. AI 분석 세부 항목
+// ======================================
+
+Table analysis_items {
+  id bigint [pk, increment]
+  analysis_run_id bigint [not null]
+  item_order int [not null]
+  request_excerpt text [not null]
+  classification varchar(20) [not null, note: 'IN_SCOPE, OUT_OF_SCOPE, NEEDS_REVIEW']
+  reason text [not null]
+  criteria_evidence text
+  suggested_question text
+
+  indexes {
+    (analysis_run_id, item_order) [unique, name: 'uk_analysis_items_order']
+  }
+
+  Note: '개별 요청사항에 대한 AI 판단과 근거'
+}
+
+// ======================================
+// 테이블 관계 (Foreign Keys)
+// ======================================
+
+// 사용자 → 프로젝트 (1:N)
+Ref: projects.owner_id > users.id [delete: restrict, update: restrict]
+
+// 프로젝트 → 제작 기준 버전 (1:N)
+Ref: criteria_versions.project_id > projects.id [delete: restrict, update: restrict]
+
+// 제작 기준 버전 → 첨부파일 (1:N)
+Ref: criteria_files.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
+
+// 프로젝트 → 클라이언트 요청사항 (1:N)
+Ref: client_requests.project_id > projects.id [delete: restrict, update: restrict]
+
+// 클라이언트 요청사항 → AI 분석 실행 (1:N)
+Ref: analysis_runs.client_request_id > client_requests.id [delete: restrict, update: restrict]
+
+// 제작 기준 버전 → AI 분석 실행 (1:N)
+Ref: analysis_runs.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
+
+// AI 분석 실행 → 세부 분석 항목 (1:N)
+Ref: analysis_items.analysis_run_id > analysis_runs.id [delete: restrict, update: restrict]
