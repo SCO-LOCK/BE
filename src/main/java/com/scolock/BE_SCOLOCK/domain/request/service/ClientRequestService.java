@@ -1,7 +1,7 @@
 package com.scolock.BE_SCOLOCK.domain.request.service;
 
 import com.scolock.BE_SCOLOCK.domain.project.entity.Project;
-import com.scolock.BE_SCOLOCK.domain.project.repository.ProjectRepository;
+import com.scolock.BE_SCOLOCK.domain.project.service.ProjectService;
 import com.scolock.BE_SCOLOCK.domain.request.dto.ClientRequestResponse;
 import com.scolock.BE_SCOLOCK.domain.request.dto.CreateClientRequestRequest;
 import com.scolock.BE_SCOLOCK.domain.request.entity.ClientRequest;
@@ -17,13 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ClientRequestService {
 
-    private final ProjectRepository projectRepository;
+    private final ProjectService projectService;
     private final ClientRequestRepository clientRequestRepository;
 
     @Transactional
     public ClientRequestResponse create(Long projectId, Long userId, CreateClientRequestRequest input) {
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.PROJECT_NOT_FOUND));
+        Project project = projectService.getProjectById(projectId);
         if (!project.getOwner().getId().equals(userId)) {
             throw new GeneralException(ErrorStatus.FORBIDDEN);
         }
