@@ -22,7 +22,6 @@ public enum SuccessStatus implements BaseCode {
         return ReasonDTO.builder()
                 .message(message)
                 .code(code)
-                .isSuccess(true)
                 .build();
     }
 
@@ -31,7 +30,6 @@ public enum SuccessStatus implements BaseCode {
         return ReasonDTO.builder()
                 .message(message)
                 .code(code)
-                .isSuccess(true)
                 .httpStatus(httpStatus)
                 .build();
     }
