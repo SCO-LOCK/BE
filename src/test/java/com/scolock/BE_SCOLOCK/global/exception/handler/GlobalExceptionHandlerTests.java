@@ -1,14 +1,13 @@
 package com.scolock.BE_SCOLOCK.global.exception.handler;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
-import com.jayway.jsonpath.JsonPath;
 import com.scolock.BE_SCOLOCK.global.apiPayload.ApiResponse;
 import com.scolock.BE_SCOLOCK.global.apiPayload.code.status.ErrorStatus;
 import com.scolock.BE_SCOLOCK.global.exception.GeneralException;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,52 +58,40 @@ class GlobalExceptionHandlerTests {
             "mvc, 500, COMMON500",
             "timeout, 503, COMMON503"
     })
-    void serverErrorReturnsTraceIdMatchingExceptionLog(String kind, int httpStatus, String code) throws Exception {
+    void serverErrorReturnsCommonResponseAndLogsException(String kind, int httpStatus, String code) throws Exception {
         String body = mockMvc.perform(get("/test/errors/{kind}", kind))
                 .andExpect(status().is(httpStatus))
                 .andExpect(jsonPath("$.code").value(code))
+                .andExpect(jsonPath("$.message").value(httpStatus == 503
+                        ? "서비스를 일시적으로 이용할 수 없습니다." : "서버 내부 오류가 발생했습니다."))
                 .andExpect(jsonPath("$.data").isEmpty())
-                .andExpect(jsonPath("$.traceId").isString())
                 .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
 
-        String traceId = JsonPath.read(body, "$.traceId");
-        assertThat(UUID.fromString(traceId).toString()).isEqualTo(traceId);
         assertThat(appender.list).hasSize(1);
         ILoggingEvent event = appender.list.getFirst();
-        assertThat(event.getFormattedMessage()).contains("traceId=" + traceId);
+        assertThat(event.getLevel()).isEqualTo(Level.ERROR);
         assertThat(event.getThrowableProxy()).isNotNull();
         assertThat(body).doesNotContain("internal-detail", "stackTrace", "java.lang");
     }
 
-    @Test
-    void separateErrorsHaveDifferentTraceIds() throws Exception {
-        String first = mockMvc.perform(get("/test/errors/unexpected"))
-                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-        String second = mockMvc.perform(get("/test/errors/unexpected"))
-                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
-
-        String firstId = JsonPath.read(first, "$.traceId");
-        String secondId = JsonPath.read(second, "$.traceId");
-        assertThat(firstId).isNotEqualTo(secondId);
-    }
-
     @ParameterizedTest
     @CsvSource({"/test/errors/missing, 404, PROJECT404", "/test/numbers/abc, 400, COMMON400"})
-    void clientErrorKeepsExistingResponseWithoutTraceId(String path, int httpStatus, String code) throws Exception {
+    void clientErrorReturnsCommonResponseWithoutErrorLog(String path, int httpStatus, String code) throws Exception {
         mockMvc.perform(get(path))
                 .andExpect(status().is(httpStatus))
                 .andExpect(jsonPath("$.code").value(code))
-                .andExpect(jsonPath("$.traceId").doesNotHaveJsonPath());
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.data").isEmpty());
         assertThat(appender.list).isEmpty();
     }
 
     @Test
-    void successKeepsExistingResponseWithoutTraceId() throws Exception {
+    void successReturnsCommonResponseWithoutErrorLog() throws Exception {
         mockMvc.perform(get("/test/numbers/1"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value("COMMON200"))
-                .andExpect(jsonPath("$.data").value(1))
-                .andExpect(jsonPath("$.traceId").doesNotHaveJsonPath());
+                .andExpect(jsonPath("$.message").value("요청이 성공했습니다."))
+                .andExpect(jsonPath("$.data").value(1));
         assertThat(appender.list).isEmpty();
     }
 
