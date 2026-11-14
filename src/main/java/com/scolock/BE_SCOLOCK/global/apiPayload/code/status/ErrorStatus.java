@@ -19,7 +19,8 @@ public enum ErrorStatus implements BaseErrorCode {
     NOT_ACCEPTABLE(HttpStatus.NOT_ACCEPTABLE, "COMMON406", "요청한 응답 형식을 제공할 수 없습니다."),
     CONTENT_TOO_LARGE(HttpStatus.CONTENT_TOO_LARGE, "COMMON413", "요청 데이터가 너무 큽니다."),
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "COMMON415", "지원하지 않는 요청 형식입니다."),
-    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "COMMON503", "서비스를 일시적으로 이용할 수 없습니다.");
+    SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "COMMON503", "서비스를 일시적으로 이용할 수 없습니다."),
+    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "PROJECT404", "프로젝트를 찾을 수 없습니다.");
 
 
     private final HttpStatus httpStatus;
