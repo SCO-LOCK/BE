@@ -1,7 +1,6 @@
 # Java 컴파일 및 패키지 산출물
 *.class
 *.jar
-!/gradle/wrapper/gradle-wrapper.jar
 *.war
 *.nar
 *.ear
