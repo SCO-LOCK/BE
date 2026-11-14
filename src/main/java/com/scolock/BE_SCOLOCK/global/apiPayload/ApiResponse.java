@@ -18,6 +18,10 @@ public class ApiResponse<T> {
         return new ApiResponse<>(SuccessStatus.OK.getCode(), SuccessStatus.OK.getMessage(), data);
     }
 
+    public static <T> ApiResponse<T> onCreated(T data) {
+        return new ApiResponse<>(SuccessStatus.CREATED.getCode(), SuccessStatus.CREATED.getMessage(), data);
+    }
+
     public static <T> ApiResponse<T> onFailure(String code, String message, T data) {
         return new ApiResponse<>(code, message, data);
     }
