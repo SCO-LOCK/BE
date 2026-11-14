@@ -4,6 +4,33 @@ Project SCOLOCK {
   Note: 'SCO/LOCK 1차 MVP'
 }
 
+Enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+Enum ExtractionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+Enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+Enum AnalysisClassification {
+  IN_SCOPE
+  OUT_OF_SCOPE
+  NEEDS_REVIEW
+}
+
+// created_at / updated_at은 BaseEntity의 JPA Auditing으로 관리하며 DB 기본값을 두지 않는다.
+// 시간 컬럼은 논리 모델에서 정밀도를 생략한다. 실제 JPA 생성 DDL은 Hibernate/DB 기본 정밀도를 따른다.
+
 // ======================================
 // 1. 사용자 (카카오 로그인)
 // ======================================
@@ -14,9 +41,9 @@ Table users {
   email varchar(254) [note: '선택 정보, 로그인 식별에 사용하지 않음']
   display_name varchar(100)
   profile_image_url varchar(1024)
-  last_login_at datetime(3)
-  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
-  updated_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  last_login_at datetime
+  created_at datetime [not null]
+  updated_at datetime [not null]
 
   Note: '카카오 OAuth2 로그인 사용자'
 }
@@ -31,9 +58,9 @@ Table projects {
   name varchar(150) [not null]
   client_name varchar(150)
   description text
-  status varchar(16) [not null, default: 'ACTIVE', note: 'ACTIVE, ARCHIVED']
-  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
-  updated_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  status ProjectStatus [not null, default: 'ACTIVE']
+  created_at datetime [not null]
+  updated_at datetime [not null]
 
   indexes {
     (owner_id, created_at) [name: 'idx_projects_owner_created']
@@ -51,7 +78,8 @@ Table criteria_versions {
   project_id bigint [not null]
   version_no int [not null]
   criteria_text longtext
-  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  created_at datetime [not null]
+  updated_at datetime [not null]
 
   indexes {
     (project_id, version_no) [unique, name: 'uk_criteria_project_version']
@@ -71,9 +99,10 @@ Table criteria_files {
   original_filename varchar(255) [not null]
   mime_type varchar(120) [not null]
   file_size_bytes bigint [not null]
-  extraction_status varchar(16) [not null, default: 'PENDING', note: 'PENDING, COMPLETED, FAILED']
+  extraction_status ExtractionStatus [not null, default: 'PENDING']
   extracted_text longtext
-  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  created_at datetime [not null]
+  updated_at datetime [not null]
 
   indexes {
     criteria_version_id [name: 'idx_criteria_files_version']
@@ -90,7 +119,8 @@ Table client_requests {
   id bigint [pk, increment]
   project_id bigint [not null]
   request_text longtext [not null]
-  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  created_at datetime [not null]
+  updated_at datetime [not null]
 
   indexes {
     (project_id, created_at) [name: 'idx_client_requests_project_created']
@@ -107,15 +137,16 @@ Table analysis_runs {
   id bigint [pk, increment]
   client_request_id bigint [not null]
   criteria_version_id bigint [not null]
-  status varchar(16) [not null, default: 'PENDING', note: 'PENDING, PROCESSING, COMPLETED, FAILED']
+  status AnalysisStatus [not null, default: 'PENDING']
   result_json json
   model_name varchar(100)
   prompt_version varchar(40)
   error_code varchar(60)
   error_message varchar(500)
-  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
-  started_at datetime(3)
-  finished_at datetime(3)
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  started_at datetime
+  finished_at datetime
 
   indexes {
     (client_request_id, created_at) [name: 'idx_analysis_request_created']
@@ -135,7 +166,7 @@ Table analysis_items {
   analysis_run_id bigint [not null]
   item_order int [not null]
   request_excerpt text [not null]
-  classification varchar(20) [not null, note: 'IN_SCOPE, OUT_OF_SCOPE, NEEDS_REVIEW']
+  classification AnalysisClassification [not null]
   reason text [not null]
   criteria_evidence text
   suggested_question text
