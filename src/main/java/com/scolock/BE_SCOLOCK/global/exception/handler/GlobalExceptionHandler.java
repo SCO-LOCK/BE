@@ -26,16 +26,16 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     // HTTP 공통 오류만 명시적으로 매핑하여 도메인별 오류 코드와 구분한다.
     private static final Map<Integer, ErrorStatus> COMMON_HTTP_ERRORS = Map.ofEntries(
-            Map.entry(400, ErrorStatus._BAD_REQUEST),
-            Map.entry(401, ErrorStatus._UNAUTHORIZED),
-            Map.entry(403, ErrorStatus._FORBIDDEN),
-            Map.entry(404, ErrorStatus._NOT_FOUND),
-            Map.entry(405, ErrorStatus._METHOD_NOT_ALLOWED),
-            Map.entry(406, ErrorStatus._NOT_ACCEPTABLE),
-            Map.entry(413, ErrorStatus._CONTENT_TOO_LARGE),
-            Map.entry(415, ErrorStatus._UNSUPPORTED_MEDIA_TYPE),
-            Map.entry(500, ErrorStatus._INTERNAL_SERVER_ERROR),
-            Map.entry(503, ErrorStatus._SERVICE_UNAVAILABLE));
+            Map.entry(400, ErrorStatus.BAD_REQUEST),
+            Map.entry(401, ErrorStatus.UNAUTHORIZED),
+            Map.entry(403, ErrorStatus.FORBIDDEN),
+            Map.entry(404, ErrorStatus.NOT_FOUND),
+            Map.entry(405, ErrorStatus.METHOD_NOT_ALLOWED),
+            Map.entry(406, ErrorStatus.NOT_ACCEPTABLE),
+            Map.entry(413, ErrorStatus.CONTENT_TOO_LARGE),
+            Map.entry(415, ErrorStatus.UNSUPPORTED_MEDIA_TYPE),
+            Map.entry(500, ErrorStatus.INTERNAL_SERVER_ERROR),
+            Map.entry(503, ErrorStatus.SERVICE_UNAVAILABLE));
 
     @ExceptionHandler(GeneralException.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(GeneralException exception) {
@@ -53,7 +53,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         Map<String, String> errors = new LinkedHashMap<>();
         exception.getConstraintViolations().forEach(violation -> addError(
                 errors, violation.getPropertyPath().toString(), violation.getMessage()));
-        ErrorReasonDTO reason = ErrorStatus._BAD_REQUEST.getReasonHttpStatus();
+        ErrorReasonDTO reason = ErrorStatus.BAD_REQUEST.getReasonHttpStatus();
         return ResponseEntity.status(reason.getHttpStatus())
                 .body(ApiResponse.onFailure(reason.getCode(), reason.getMessage(), errors));
     }
@@ -61,7 +61,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnexpectedException(Exception exception) {
         log.error("Unexpected request processing error", exception);
-        ErrorReasonDTO reason = ErrorStatus._INTERNAL_SERVER_ERROR.getReasonHttpStatus();
+        ErrorReasonDTO reason = ErrorStatus.INTERNAL_SERVER_ERROR.getReasonHttpStatus();
         return ResponseEntity.status(reason.getHttpStatus())
                 .body(ApiResponse.onFailure(reason.getCode(), reason.getMessage(), null));
     }
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
             return ApiResponse.onFailure(commonError.getCode(), commonError.getMessage(), data);
         }
         String message = status.is5xxServerError()
-                ? ErrorStatus._INTERNAL_SERVER_ERROR.getMessage() : "요청을 처리할 수 없습니다.";
+                ? ErrorStatus.INTERNAL_SERVER_ERROR.getMessage() : "요청을 처리할 수 없습니다.";
         return ApiResponse.onFailure("COMMON" + status.value(), message, data);
     }
 
