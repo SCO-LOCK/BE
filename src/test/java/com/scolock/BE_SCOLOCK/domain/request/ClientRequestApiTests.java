@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -129,6 +130,34 @@ class ClientRequestApiTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("COMMON403"));
         assertThat(clientRequestRepository.count()).isZero();
+    }
+
+    @Test
+    void documentsRequestAndSuccessAndErrorResponses() throws Exception {
+        String body = mockMvc.perform(get("/v3/api-docs"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paths['/projects/{projectId}/requests'].post.summary")
+                        .value("클라이언트 요청 사항 등록"))
+                .andExpect(jsonPath("$.paths['/projects/{projectId}/requests'].post.requestBody.required").value(true))
+                .andExpect(jsonPath("$.components.schemas.CreateClientRequestRequest.required[0]").value("requestText"))
+                .andExpect(jsonPath("$.components.schemas.ClientRequestResponse.properties.createdAt").exists())
+                .andExpect(jsonPath("$.components.schemas.ClientRequestResponse.properties.requestText").exists())
+                .andExpect(jsonPath("$.components.schemas.ClientRequestResponse.properties.projectId").exists())
+                .andExpect(jsonPath("$.components.schemas.ClientRequestResponse.properties.id").exists())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+
+        var document = JsonPath.parse(body);
+        String responses = "$.paths['/projects/{projectId}/requests'].post.responses";
+        for (String code : java.util.List.of("201", "400", "403", "404", "500")) {
+            Object content = document.read(responses + "['" + code + "'].content['application/json']");
+            assertThat(content).isNotNull();
+        }
+        String successRef = document.read(responses + "['201'].content['application/json'].schema['$ref']");
+        String successSchema = successRef.substring(successRef.lastIndexOf('/') + 1);
+        String dataRef = document.read("$.components.schemas['" + successSchema + "'].properties.data['$ref']");
+        assertThat(dataRef).isEqualTo("#/components/schemas/ClientRequestResponse");
+        String errorCode = document.read(responses + "['500'].content['application/json'].example.code");
+        assertThat(errorCode).isEqualTo("COMMON500");
     }
 
     private Long createProject(Long ownerId) {
