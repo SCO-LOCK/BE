@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: BE_SCOLOCK
+  profiles:
+    default: local
+
+server:
+  port: 8081
