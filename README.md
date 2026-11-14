@@ -28,6 +28,15 @@
 .\gradlew.bat test
 ```
 
+## Swagger API 문서
+
+- Spring Boot 4.1.x와 호환되는 `springdoc-openapi-starter-webmvc-ui:3.2.0`을 사용합니다.
+- 애플리케이션 실행 후 Swagger UI: http://localhost:8081/swagger-ui.html
+- OpenAPI JSON: http://localhost:8081/v3/api-docs
+- `@RestController`에 추가한 API는 자동으로 문서화됩니다. 아직 컨트롤러가 없다면 API 목록은 비어 있습니다.
+- API 설명은 `@Operation`, 컨트롤러 그룹 이름은 `@Tag`, DTO 필드 설명은 `@Schema`로 추가할 수 있습니다.
+- 현재 `local` 프로필은 MySQL을 사용하므로 실행 전에 `scolock_db` 데이터베이스와 `DB_USERNAME`, `DB_PASSWORD` 환경 변수를 준비해야 합니다.
+
 ## 커밋 메시지
 - feat:      새로운 기능 구현
 - fix:       버그, 오류 해결
