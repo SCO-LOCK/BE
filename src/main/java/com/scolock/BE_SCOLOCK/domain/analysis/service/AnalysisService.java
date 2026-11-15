@@ -7,8 +7,6 @@ import com.scolock.BE_SCOLOCK.domain.analysis.enums.AnalysisStatus;
 import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisItemRepository;
 import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisRunRepository;
 import com.scolock.BE_SCOLOCK.domain.project.entity.Project;
-import com.scolock.BE_SCOLOCK.domain.project.service.ProjectService;
-import com.scolock.BE_SCOLOCK.domain.request.repository.ClientRequestRepository;
 import com.scolock.BE_SCOLOCK.global.apiPayload.code.status.ErrorStatus;
 import com.scolock.BE_SCOLOCK.global.exception.GeneralException;
 import java.util.List;
@@ -21,8 +19,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AnalysisService {
 
-    private final ProjectService projectService;
-    private final ClientRequestRepository clientRequestRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final AnalysisItemRepository analysisItemRepository;
 
@@ -30,7 +26,7 @@ public class AnalysisService {
             Long analysisId,
             Long userId
     ) {
-        // 분석 존재 확인
+        // 분석 존재 확인(분석 실행 조회)
         AnalysisRun run = analysisRunRepository.findById(analysisId)
                 .orElseThrow(() -> new GeneralException(
                         ErrorStatus.ANALYSIS_NOT_FOUND
@@ -42,15 +38,17 @@ public class AnalysisService {
             throw new GeneralException(ErrorStatus.FORBIDDEN);
         }
 
-        // 해당 실행이 완료되었는지 확인
-        if (run.getStatus() != AnalysisStatus.COMPLETED) {
-            throw new GeneralException(ErrorStatus.ANALYSIS_RESULT_NOT_READY);
-        }
 
-        // 분석 결과 조회
-        List<AnalysisItem> items = analysisItemRepository
-                .findAllByAnalysisRun_IdOrderByItemOrderAsc(run.getId());
+        // 분석이 완료된 경우에만 분석 결과를 조회
+        List<AnalysisItem> items =
+                run.getStatus() == AnalysisStatus.COMPLETED
+                        ? analysisItemRepository
+                        .findAllByAnalysisRun_IdOrderByItemOrderAsc(
+                                run.getId()
+                        )
+                        : List.of();
 
+        // 현재 상태와 결과 반환
         return AnalysisResponse.from(run, items);
     }
 }
