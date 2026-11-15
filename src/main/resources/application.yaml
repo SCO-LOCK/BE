@@ -1,6 +1,9 @@
 spring:
   application:
     name: BE_SCOLOCK
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY}
   profiles:
     default: local
 
