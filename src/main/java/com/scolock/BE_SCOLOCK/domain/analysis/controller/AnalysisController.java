@@ -32,7 +32,7 @@ public class AnalysisController {
             description = "로그인 구현 전까지 사용자 ID를 1로 고정합니다. "
                     + "ID 1 사용자가 소유한 프로젝트의 최신 제작 기준으로 요청 사항을 비동기 분석합니다. "
                     + "요청 본문은 필요하지 않으며, 분석 완료를 기다리지 않고 생성된 분석 ID를 반환합니다. "
-                    + "동일한 요청 사항에 대기 중이거나 진행 중인 분석이 있으면 새 분석을 생성할 수 없습니다.")
+                    + "동일한 요청 사항에 대기 중이거나 진행 중이거나 완료된 분석이 있으면 새 분석을 생성할 수 없습니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "202",
                     description = "분석 요청 접수 성공 (분석 완료를 의미하지 않음)", useReturnTypeSchema = true,
@@ -72,11 +72,16 @@ public class AnalysisController {
                                             """)
                             })),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409",
-                    description = "동일한 요청 사항에 대기 중이거나 진행 중인 분석이 있음",
+                    description = "동일한 요청 사항에 대기 중이거나 진행 중이거나 완료된 분석이 있음",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),
-                            examples = @ExampleObject(value = """
+                            examples = {
+                                    @ExampleObject(name = "분석 진행 중", value = """
                                     {"code":"ANALYSIS409","message":"이미 분석 중인 요청입니다.","data":null}
-                                    """))),
+                                    """),
+                                    @ExampleObject(name = "분석 완료", value = """
+                                    {"code":"ANALYSIS409_COMPLETED","message":"이미 분석이 완료된 요청입니다.","data":null}
+                                    """)
+                            })),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500",
                     description = "서버 내부 오류",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),

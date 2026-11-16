@@ -51,6 +51,10 @@ public class AnalysisPersistenceService {
             throw new GeneralException(ErrorStatus.BAD_REQUEST);
         }
         if (analysisRunRepository.existsByClientRequestIdAndStatusIn(requestId,
+                List.of(AnalysisStatus.COMPLETED))) {
+            throw new GeneralException(ErrorStatus.ANALYSIS_ALREADY_COMPLETED);
+        }
+        if (analysisRunRepository.existsByClientRequestIdAndStatusIn(requestId,
                 List.of(AnalysisStatus.PENDING, AnalysisStatus.PROCESSING))) {
             throw new GeneralException(ErrorStatus.ANALYSIS_IN_PROGRESS);
         }

@@ -90,7 +90,7 @@ DB 계정과 AI 키는 로컬과 동일한 환경 변수를 사용합니다. 기
 - AI 실패 시 DB 상태를 `FAILED`로 변경하고 오류 코드 (`AI_API_ERROR`, `AI_TIMEOUT`, `AI_INVALID_RESPONSE`)와 메시지를 저장합니다. 그 외 처리 오류는
   `ANALYSIS_ERROR`로 저장합니다. 접수 응답은 분석 성공을 의미하지 않습니다.
 - 작업 큐가 가득 차 접수하지 못하면 해당 분석을 `FAILED`, 오류 코드 `ANALYSIS_UNAVAILABLE`로 저장하고 HTTP 503을 반환합니다.
-- 실패해도 요청 원문은 보존되며 같은 POST를 다시 호출하면 새 분석 기록으로 재시도합니다. 실행 중인 같은 요청의 중복 호출은 HTTP 409입니다.
+- 실패해도 요청 원문은 보존되며 같은 POST를 다시 호출하면 새 분석 기록으로 재시도합니다. 같은 요청에 대기·진행 중인 분석이 있으면 HTTP 409 (`ANALYSIS409`), 완료된 분석이 있으면 HTTP 409 (`ANALYSIS409_COMPLETED`)를 반환합니다. 완료된 분석이 있으면 제작 기준이 변경되거나 실패 이력이 있어도 재분석하지 않습니다.
 - 분석을 기다리는 동안 DB 트랜잭션을 열어 두지 않습니다. 서버가 강제 종료되어 `PENDING` 또는 `PROCESSING` 기록이 남은 경우에는 해당 기록을 운영자가 실패 처리한 뒤 재시도해야 합니다.
 - 결과 전체는 `analysis_runs.result_json`에 저장하고, `findings`의 각 항목은 같은 트랜잭션에서 `analysis_items`에 저장합니다.
   각 항목은 `analysis_run_id`로 분석과 연결되며, `item_order`는 응답 배열 순서대로 1부터 부여합니다.

@@ -272,6 +272,30 @@ class AnalysisApiTests {
     }
 
     @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void rejectsCompletedAnalysisEvenWithNewCriteriaAndFailedHistory(boolean hasNewCriteriaAndFailedHistory) throws Exception {
+        var input = persistence.start(project.getId(), request.getId(), 1L);
+        persistence.markProcessing(input.analysisId());
+        persistence.complete(input.analysisId(), new AnalysisResult(java.util.List.of()), "test-model");
+        if (hasNewCriteriaAndFailedHistory) {
+            entityManager.persist(CriteriaVersion.builder().project(project).versionNo(2)
+                    .criteriaText("변경된 제작 기준").build());
+            analysisRunRepository.save(AnalysisRun.builder().clientRequest(request).criteriaVersion(criteria)
+                    .status(AnalysisStatus.FAILED).build());
+        }
+        entityManager.flush();
+        long countBefore = analysisRunRepository.count();
+
+        submit(project.getId(), request.getId())
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("ANALYSIS409_COMPLETED"))
+                .andExpect(jsonPath("$.message").value("이미 분석이 완료된 요청입니다."));
+
+        assertThat(analysisRunRepository.count()).isEqualTo(countBefore);
+        verifyNoInteractions(analysisWorker, aiClient);
+    }
+
+    @ParameterizedTest
     @EnumSource(value = AnalysisStatus.class, names = {"PENDING", "PROCESSING"})
     void rejectsDuplicateInProgressAnalysis(AnalysisStatus analysisStatus) throws Exception {
         analysisRunRepository.save(AnalysisRun.builder().clientRequest(request).criteriaVersion(criteria)
