@@ -1,6 +1,7 @@
 package com.scolock.BE_SCOLOCK.domain.analysis.controller;
 
 import com.scolock.BE_SCOLOCK.domain.analysis.dto.AnalysisResponse;
+import com.scolock.BE_SCOLOCK.domain.analysis.dto.CreateAnalysisResponse;
 import com.scolock.BE_SCOLOCK.domain.analysis.service.AnalysisService;
 import com.scolock.BE_SCOLOCK.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,12 +14,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Analyses", description = "프로젝트별 요청 사항 분석 API")
 @RestController
 @RequiredArgsConstructor
 public class AnalysisController {
@@ -28,6 +29,7 @@ public class AnalysisController {
 
     private final AnalysisService analysisService;
 
+    @Tag(name = "Analyses", description = "프로젝트별 요청 사항 분석 API")
     @Operation(summary = "요청 사항 분석 생성",
             description = "로그인 구현 전까지 사용자 ID를 1로 고정합니다. "
                     + "ID 1 사용자가 소유한 프로젝트의 최신 제작 기준으로 요청 사항을 비동기 분석합니다. "
@@ -76,11 +78,11 @@ public class AnalysisController {
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),
                             examples = {
                                     @ExampleObject(name = "분석 진행 중", value = """
-                                    {"code":"ANALYSIS409","message":"이미 분석 중인 요청입니다.","data":null}
-                                    """),
+                                            {"code":"ANALYSIS409","message":"이미 분석 중인 요청입니다.","data":null}
+                                            """),
                                     @ExampleObject(name = "분석 완료", value = """
-                                    {"code":"ANALYSIS409_COMPLETED","message":"이미 분석이 완료된 요청입니다.","data":null}
-                                    """)
+                                            {"code":"ANALYSIS409_COMPLETED","message":"이미 분석이 완료된 요청입니다.","data":null}
+                                            """)
                             })),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500",
                     description = "서버 내부 오류",
@@ -97,11 +99,28 @@ public class AnalysisController {
     })
     @PostMapping("/projects/{projectId}/requests/{requestId}/analyses")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public ApiResponse<AnalysisResponse> create(
+    public ApiResponse<CreateAnalysisResponse> create(
             @Parameter(description = "분석할 요청 사항이 속한 프로젝트 ID (양의 정수)", example = "1", required = true)
             @PathVariable @Positive(message = "프로젝트 ID는 양수여야 합니다.") Long projectId,
             @Parameter(description = "분석할 요청 사항 ID (양의 정수)", example = "1", required = true)
             @PathVariable @Positive(message = "요청 사항 ID는 양수여야 합니다.") Long requestId) {
         return ApiResponse.onAccepted(analysisService.create(projectId, requestId, TEMPORARY_USER_ID));
+    }
+
+    @Tag(name = "Analysis", description = "AI 분석 조회 API")
+    @Operation(summary = "AI 분석 조회",
+            description = "분석 실행의 상태를 조회합니다. "
+                    + "COMPLETED 상태일 때만 분석 결과를 반환합니다. "
+                    + "로그인 구현 전까지 사용자 ID는 1로 고정합니다."
+    )
+    @GetMapping(value = "/analyses/{analysisId}")
+    public ApiResponse<AnalysisResponse> getAnalysis(
+            @Parameter(description = "분석 실행 ID", example = "1")
+            @PathVariable("analysisId")
+            @Positive(message = "분석 ID는 양수여야 합니다.")
+            Long analysisId
+    ) {
+        AnalysisResponse response = analysisService.getAnalysis(analysisId, TEMPORARY_USER_ID);
+        return ApiResponse.onSuccess(response);
     }
 }

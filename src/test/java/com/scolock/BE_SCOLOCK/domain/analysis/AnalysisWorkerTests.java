@@ -4,6 +4,8 @@ import com.scolock.BE_SCOLOCK.domain.analysis.ai.AnalysisAiException;
 import com.scolock.BE_SCOLOCK.domain.analysis.ai.RequestAnalysisClient;
 import com.scolock.BE_SCOLOCK.domain.analysis.config.AnalysisAsyncConfig;
 import com.scolock.BE_SCOLOCK.domain.analysis.dto.AnalysisResult;
+import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisItemRepository;
+import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisRunRepository;
 import com.scolock.BE_SCOLOCK.domain.analysis.service.AnalysisPersistenceService;
 import com.scolock.BE_SCOLOCK.domain.analysis.service.AnalysisPersistenceService.AnalysisInput;
 import com.scolock.BE_SCOLOCK.domain.analysis.service.AnalysisService;
@@ -25,6 +27,8 @@ class AnalysisWorkerTests {
     @Autowired private AnalysisService service;
     @MockitoBean private AnalysisPersistenceService persistence;
     @MockitoBean private RequestAnalysisClient aiClient;
+    @MockitoBean private AnalysisRunRepository analysisRunRepository;
+    @MockitoBean private AnalysisItemRepository analysisItemRepository;
 
     @Test
     void respondsWhileAiIsStillRunningThenSavesResult() throws Exception {
