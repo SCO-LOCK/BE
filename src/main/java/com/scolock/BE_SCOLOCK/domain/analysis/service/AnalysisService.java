@@ -22,10 +22,7 @@ public class AnalysisService {
     private final AnalysisRunRepository analysisRunRepository;
     private final AnalysisItemRepository analysisItemRepository;
 
-    public AnalysisResponse getAnalysis(
-            Long analysisId,
-            Long userId
-    ) {
+    public AnalysisResponse getAnalysis(Long analysisId, Long userId) {
         // 분석 존재 확인(분석 실행 조회)
         AnalysisRun run = analysisRunRepository.findById(analysisId)
                 .orElseThrow(() -> new GeneralException(
@@ -37,7 +34,6 @@ public class AnalysisService {
         if (!project.getOwner().getId().equals(userId)) {
             throw new GeneralException(ErrorStatus.FORBIDDEN);
         }
-
 
         // 분석이 완료된 경우에만 분석 결과를 조회
         List<AnalysisItem> items =

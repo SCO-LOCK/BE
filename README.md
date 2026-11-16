@@ -9,24 +9,27 @@
 | Build Tool | Gradle 9.8.2 (Wrapper) |
 | Web | Spring Web MVC |
 | Persistence | Spring Data JPA |
-| Database | H2 (로컬 개발 및 테스트) |
+| Database | MySQL (로컬 개발), H2 (테스트) |
 | Validation | Spring Boot Starter Validation |
 | Library | Lombok |
 | Test | Spring Boot Test · JUnit Platform |
 
 ## 로컬 실행 및 테스트
 
-- 별도 DB 설치 없이 실행할 수 있도록 H2 JDBC 드라이버를 포함합니다.
 - 활성 프로필을 지정하지 않으면 `local` 프로필을 사용합니다.
-- 로컬 DB는 `./.local/data/scolock`에 파일로 저장되며 재시작 후에도 유지됩니다. 해당 디렉터리는 Git 추적에서 제외됩니다.
-- 로컬 H2 접속 정보는 사용자 `sa`, 빈 비밀번호이며, 개발용 스키마는 `ddl-auto=update`로 갱신합니다.
+- 로컬 실행에는 `localhost:3306`에서 실행 중인 MySQL과 `scolock_db` 데이터베이스가 필요합니다. 데이터베이스는 미리 생성해야 하며, 개발용 테이블은 `ddl-auto=update`로 갱신합니다.
+- 실행 프로세스에 `DB_USERNAME`, `DB_PASSWORD` 환경 변수를 설정합니다. IntelliJ 실행 구성에서도 변수 이름 앞뒤에 공백이 없어야 합니다. 예를 들어 ` DB_PASSWORD`는 `DB_PASSWORD`와 다른 이름이므로 비밀번호가 전달되지 않습니다.
+- `.env` 파일은 자동으로 로드하지 않습니다. IntelliJ 실행 구성 또는 터미널에서 환경 변수를 전달해야 합니다.
 - 테스트는 `test` 프로필의 별도 메모리 DB와 `ddl-auto=create-drop`을 사용합니다.
-- 운영 DB 도입 시 해당 JDBC 드라이버와 프로필별 연결 설정 및 스키마 관리 정책을 별도로 구성해야 합니다.
+- `halfthon` 프로필은 `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` 환경 변수로 MySQL 연결을 설정합니다.
 
 ```powershell
+# 현재 터미널에 DB_USERNAME, DB_PASSWORD를 설정한 후 실행합니다.
 .\gradlew.bat bootRun
 .\gradlew.bat test
 ```
+
+`Unable to determine Dialect without JDBC metadata`가 발생하면 앞선 로그의 JDBC 연결 오류를 확인하고 MySQL 실행 여부, 데이터베이스 존재 여부, 환경 변수 이름과 인증 정보를 확인합니다. 연결 실패 상태에서 dialect만 지정해도 DB 연결 문제는 해결되지 않습니다.
 
 ## Swagger API 문서
 
@@ -35,7 +38,6 @@
 - OpenAPI JSON: http://localhost:8081/v3/api-docs
 - `@RestController`에 추가한 API는 자동으로 문서화됩니다. 아직 컨트롤러가 없다면 API 목록은 비어 있습니다.
 - API 설명은 `@Operation`, 컨트롤러 그룹 이름은 `@Tag`, DTO 필드 설명은 `@Schema`로 추가할 수 있습니다.
-- 현재 `local` 프로필은 MySQL을 사용하므로 실행 전에 `scolock_db` 데이터베이스와 `DB_USERNAME`, `DB_PASSWORD` 환경 변수를 준비해야 합니다.
 
 ## 커밋 메시지
 - feat:      새로운 기능 구현

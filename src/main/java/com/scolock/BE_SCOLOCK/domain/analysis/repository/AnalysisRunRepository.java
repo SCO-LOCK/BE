@@ -6,8 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AnalysisRunRepository extends JpaRepository<AnalysisRun, Long> {
 
-    Optional<AnalysisRun> findByIdAndClientRequest_Id(
-            Long id,
-            Long requestId
-    );
+    Optional<AnalysisRun> findByIdAndClientRequest_Id(Long id, Long requestId);
 }

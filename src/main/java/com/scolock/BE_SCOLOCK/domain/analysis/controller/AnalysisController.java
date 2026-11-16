@@ -26,18 +26,14 @@ public class AnalysisController {
                     + "COMPLETED 상태일 때만 분석 결과를 반환합니다. "
                     + "로그인 구현 전까지 사용자 ID는 1로 고정합니다."
     )
-    @GetMapping(value = "/analyses/{analysisId}", produces = "application/json")
+    @GetMapping(value = "/analyses/{analysisId}")
     public ApiResponse<AnalysisResponse> getAnalysis(
             @Parameter(description = "분석 실행 ID", example = "1")
             @PathVariable("analysisId")
             @Positive(message = "분석 ID는 양수여야 합니다.")
             Long analysisId
     ) {
-        AnalysisResponse response = analysisService.getAnalysis(
-                analysisId,
-                TEMPORARY_USER_ID
-        );
-
+        AnalysisResponse response = analysisService.getAnalysis(analysisId, TEMPORARY_USER_ID);
         return ApiResponse.onSuccess(response);
     }
 }

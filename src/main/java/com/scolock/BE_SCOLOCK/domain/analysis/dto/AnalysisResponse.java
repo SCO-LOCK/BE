@@ -48,6 +48,7 @@ public record AnalysisResponse(
     public record ItemResponse(
             Long id,
             Integer itemOrder, //항목 표시 순서. 1부터 오름차순
+            String title,
             AnalysisClassification classification,
             String criteriaEvidence,
             String requestExcerpt,
@@ -59,6 +60,7 @@ public record AnalysisResponse(
             return new ItemResponse(
                     item.getId(),
                     item.getItemOrder(),
+                    item.getTitle(),
                     item.getClassification(),
                     item.getCriteriaEvidence(),
                     item.getRequestExcerpt(),
