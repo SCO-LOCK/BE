@@ -6,11 +6,11 @@ import com.scolock.BE_SCOLOCK.domain.analysis.entity.AnalysisRun;
 import com.scolock.BE_SCOLOCK.domain.analysis.enums.AnalysisStatus;
 import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisRunRepository;
 import com.scolock.BE_SCOLOCK.domain.criteria.entity.CriteriaVersion;
-import com.scolock.BE_SCOLOCK.domain.criteria.repository.CriteriaVersionRepository;
+import com.scolock.BE_SCOLOCK.domain.criteria.service.CriteriaVersionService;
 import com.scolock.BE_SCOLOCK.domain.project.entity.Project;
 import com.scolock.BE_SCOLOCK.domain.project.service.ProjectService;
 import com.scolock.BE_SCOLOCK.domain.request.entity.ClientRequest;
-import com.scolock.BE_SCOLOCK.domain.request.repository.ClientRequestRepository;
+import com.scolock.BE_SCOLOCK.domain.request.service.ClientRequestService;
 import com.scolock.BE_SCOLOCK.global.apiPayload.code.status.ErrorStatus;
 import com.scolock.BE_SCOLOCK.global.exception.GeneralException;
 import java.util.List;
@@ -26,9 +26,14 @@ public class AnalysisPersistenceService {
 
     private final JsonMapper mapper;
     private final ProjectService projectService;
-    private final ClientRequestRepository clientRequestRepository;
-    private final CriteriaVersionRepository criteriaVersionRepository;
+    private final ClientRequestService clientRequestService;
+    private final CriteriaVersionService criteriaVersionService;
     private final AnalysisRunRepository analysisRunRepository;
+
+    public AnalysisRun getAnalysisRunById(Long id) {
+        return analysisRunRepository.findById(id)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.ANALYSIS_NOT_FOUND));
+    }
 
     @Transactional
     public AnalysisInput start(Long projectId, Long requestId, Long userId) {
@@ -37,8 +42,7 @@ public class AnalysisPersistenceService {
             throw new GeneralException(ErrorStatus.FORBIDDEN);
         }
 
-        ClientRequest request = clientRequestRepository.findByIdAndProjectId(requestId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.CLIENT_REQUEST_NOT_FOUND));
+        ClientRequest request = clientRequestService.getClientRequestByIdAndProjectId(requestId, projectId);
         if (request.getRequestText() == null || request.getRequestText().isBlank()) {
             throw new GeneralException(ErrorStatus.BAD_REQUEST);
         }
@@ -46,8 +50,7 @@ public class AnalysisPersistenceService {
                 List.of(AnalysisStatus.PENDING, AnalysisStatus.PROCESSING))) {
             throw new GeneralException(ErrorStatus.ANALYSIS_IN_PROGRESS);
         }
-        CriteriaVersion criteriaVersion = criteriaVersionRepository.findFirstByProjectIdOrderByVersionNoDesc(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorStatus.CRITERIA_VERSION_NOT_FOUND));
+        CriteriaVersion criteriaVersion = criteriaVersionService.getLatestCriteriaVersionByProjectId(projectId);
 
         AnalysisRun analysis = AnalysisRun.builder()
                 .clientRequest(request)
@@ -61,19 +64,19 @@ public class AnalysisPersistenceService {
 
     @Transactional
     public void markProcessing(Long id) {
-        AnalysisRun run = analysisRunRepository.findById(id).orElseThrow();
+        AnalysisRun run = getAnalysisRunById(id);
         run.startProcessing();
     }
 
     @Transactional
     public void complete(Long id, AnalysisResult result, String model) {
-        AnalysisRun run = analysisRunRepository.findById(id).orElseThrow();
+        AnalysisRun run = getAnalysisRunById(id);
         run.complete(mapper.writeValueAsString(result), model);
     }
 
     @Transactional
     public void fail(Long id, String code, String message) {
-        AnalysisRun run = analysisRunRepository.findById(id).orElseThrow();
+        AnalysisRun run = getAnalysisRunById(id);
         run.fail(code, message);
     }
 

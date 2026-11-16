@@ -21,6 +21,7 @@ public enum ErrorStatus implements BaseErrorCode {
     UNSUPPORTED_MEDIA_TYPE(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "COMMON415", "지원하지 않는 요청 형식입니다."),
     SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "COMMON503", "서비스를 일시적으로 이용할 수 없습니다."),
     ANALYSIS_IN_PROGRESS(HttpStatus.CONFLICT, "ANALYSIS409", "이미 분석 중인 요청입니다."),
+    ANALYSIS_NOT_FOUND(HttpStatus.NOT_FOUND, "ANALYSIS404", "분석을 찾을 수 없습니다."),
     PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "PROJECT404", "프로젝트를 찾을 수 없습니다."),
     CLIENT_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "REQUEST404", "요청 사항을 찾을 수 없습니다."),
     CRITERIA_VERSION_NOT_FOUND(HttpStatus.NOT_FOUND, "CRITERIA404", "제작 기준 버전을 찾을 수 없습니다.");
