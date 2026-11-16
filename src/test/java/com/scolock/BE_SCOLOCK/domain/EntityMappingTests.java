@@ -45,6 +45,7 @@ class EntityMappingTests {
         AnalysisRun run = persist(AnalysisRun.builder().clientRequest(request)
                 .criteriaVersion(version).resultJson(json).build());
         AnalysisItem item = persist(AnalysisItem.builder().analysisRun(run).itemOrder(1)
+                .title("제작 정보 확인")
                 .requestExcerpt("수정 요청").classification(AnalysisClassification.MISSING_INFO)
                 .reason("제작 반영에 필요한 정보 확인 필요").build());
         entityManager.flush();
@@ -52,6 +53,7 @@ class EntityMappingTests {
 
         AnalysisItem loaded = entityManager.find(AnalysisItem.class, item.getId());
         AnalysisRun loadedRun = loaded.getAnalysisRun();
+        assertThat(loaded.getTitle()).isEqualTo("제작 정보 확인");
         assertThat(loaded.getClassification()).isEqualTo(AnalysisClassification.MISSING_INFO);
         assertThat(loadedRun.getResultJson()).isEqualTo(json);
         assertThat(loadedRun.getStatus()).isEqualTo(AnalysisStatus.PENDING);
@@ -119,9 +121,11 @@ class EntityMappingTests {
         ClientRequest request = persist(ClientRequest.builder().project(project).requestText("요청").build());
         AnalysisRun run = persist(AnalysisRun.builder().clientRequest(request).criteriaVersion(version).build());
         persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).requestExcerpt("요청")
+                .title("요청 의미 확인")
                 .classification(AnalysisClassification.AMBIGUOUS).reason("요청 해석 확인 필요").build());
         assertThatThrownBy(() -> {
             persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).requestExcerpt("요청")
+                    .title("제작 기준 변경 확인")
                     .classification(AnalysisClassification.BASELINE_CHANGE).reason("기존 제작 기준 변경 가능성").build());
             entityManager.flush();
         }).isInstanceOf(PersistenceException.class);
