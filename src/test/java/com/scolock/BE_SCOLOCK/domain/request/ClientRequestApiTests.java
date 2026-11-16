@@ -148,11 +148,14 @@ class ClientRequestApiTests {
 
         var document = JsonPath.parse(body);
         String responses = "$.paths['/projects/{projectId}/requests'].post.responses";
-        for (String code : java.util.List.of("201", "400", "403", "404", "500")) {
+        for (String code : java.util.List.of("400", "403", "404", "500")) {
             Object content = document.read(responses + "['" + code + "'].content['application/json']");
             assertThat(content).isNotNull();
         }
-        String successRef = document.read(responses + "['201'].content['application/json'].schema['$ref']");
+        // produces를 지정하지 않은 성공 응답은 미디어 타입 대신 반환 스키마를 검증한다.
+        java.util.List<String> successRefs = document.read(responses + "['201'].content.*.schema['$ref']");
+        assertThat(successRefs).hasSize(1);
+        String successRef = successRefs.getFirst();
         String successSchema = successRef.substring(successRef.lastIndexOf('/') + 1);
         String dataRef = document.read("$.components.schemas['" + successSchema + "'].properties.data['$ref']");
         assertThat(dataRef).isEqualTo("#/components/schemas/ClientRequestResponse");
