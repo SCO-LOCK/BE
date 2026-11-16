@@ -70,7 +70,7 @@ public class ClientRequestController {
                                     {"code":"COMMON500","message":"서버 내부 오류가 발생했습니다.","data":null}
                                     """)))
     })
-    @PostMapping(produces = "application/json")
+    @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public ApiResponse<ClientRequestResponse> create(
             @Parameter(description = "요청 사항을 등록할 프로젝트 ID (양의 정수)", example = "1", required = true)

@@ -90,7 +90,7 @@ public class AnalysisController {
                                     {"code":"COMMON503","message":"서비스를 일시적으로 이용할 수 없습니다.","data":null}
                                     """)))
     })
-    @PostMapping(value = "/projects/{projectId}/requests/{requestId}/analyses", produces = "application/json")
+    @PostMapping("/projects/{projectId}/requests/{requestId}/analyses")
     @ResponseStatus(HttpStatus.ACCEPTED)
     public ApiResponse<AnalysisResponse> create(
             @Parameter(description = "분석할 요청 사항이 속한 프로젝트 ID (양의 정수)", example = "1", required = true)
