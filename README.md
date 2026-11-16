@@ -140,14 +140,6 @@ curl -X POST http://localhost:8081/projects/1/requests \
   -d '{"requestText":"모델한테 목걸이 하나만 추가해주세요."}'
 ```
 
-접수 응답의 `analysisId`로 DB에서 결과를 확인합니다. 아래 `1`을 반환된 ID로 바꾸세요.
-
-```sql
-SELECT id, status, result_json, error_code, error_message, started_at, finished_at
-FROM analysis_runs
-WHERE id = 1;
-```
-
 분석 호출에는 `OPENAI_API_KEY`가 필요합니다. 당일 검증 기준의 30초 제한은 `AI_ANALYSIS_TIMEOUT=30s`로 설정할 수 있습니다.
 Case 8은 접수 후 DB 상태 `COMPLETED`와 빈 `findings`를 기대하며, 안내 문구는 FE에서 표시합니다.
 각 결과는 문제 탐지 여부, 불필요한 경고 여부, 근거의 납득 가능성, 질문의 실제 전달 가능성으로 확인합니다.
