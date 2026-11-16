@@ -86,6 +86,9 @@ DB 계정과 AI 키는 로컬과 동일한 환경 변수를 사용합니다. 기
 
 - 생성 응답의 `data`는 `analysisId`만 포함합니다. 현재 상태, 상세 결과와 오류 정보는 `analysis_runs` 테이블에서 확인해야 합니다.
 - 저장되는 결과 유형은 `MISSING_INFO`, `AMBIGUOUS`, `BASELINE_CHANGE`, `TECH_CHECK`이며, 요청 원문 인용 필드는 `request_excerpt`입니다.
+- 확인사항은 최대 3개입니다. 기존 기준과 직접 충돌하거나 변경 가능성이 큰 내용 → 필수 정보 누락 → 모호한 표현 → 기술 확인 순으로 판단하고 선택합니다.
+  확인 없이 진행하면 실제 방향 오류나 재작업 가능성이 있는 내용만 포함하며, 사소한 확인사항과 중복은 제외합니다. 3개를 억지로 채우지 않습니다.
+  AI 출력 스키마와 서버 검증에 모두 개수 제한을 적용하며, 초과 응답은 `AI_INVALID_RESPONSE`로 처리합니다.
 - 확인사항이 없는 경우 DB 상태를 `COMPLETED`로 변경하고 빈 `findings`를 저장합니다. 입력 정보 부족 자체는 시스템 오류가 아닙니다.
 - AI 실패 시 DB 상태를 `FAILED`로 변경하고 오류 코드 (`AI_API_ERROR`, `AI_TIMEOUT`, `AI_INVALID_RESPONSE`)와 메시지를 저장합니다. 그 외 처리 오류는
   `ANALYSIS_ERROR`로 저장합니다. 접수 응답은 분석 성공을 의미하지 않습니다.
@@ -93,7 +96,7 @@ DB 계정과 AI 키는 로컬과 동일한 환경 변수를 사용합니다. 기
 - 실패해도 요청 원문은 보존되며 같은 POST를 다시 호출하면 새 분석 기록으로 재시도합니다. 같은 요청에 대기·진행 중인 분석이 있으면 HTTP 409 (`ANALYSIS409`), 완료된 분석이 있으면 HTTP 409 (`ANALYSIS409_COMPLETED`)를 반환합니다. 완료된 분석이 있으면 제작 기준이 변경되거나 실패 이력이 있어도 재분석하지 않습니다.
 - 분석을 기다리는 동안 DB 트랜잭션을 열어 두지 않습니다. 서버가 강제 종료되어 `PENDING` 또는 `PROCESSING` 기록이 남은 경우에는 해당 기록을 운영자가 실패 처리한 뒤 재시도해야 합니다.
 - 결과 전체는 `analysis_runs.result_json`에 저장하고, `findings`의 각 항목은 같은 트랜잭션에서 `analysis_items`에 저장합니다.
-  각 항목은 `analysis_run_id`로 분석과 연결되며, `item_order`는 응답 배열 순서대로 1부터 부여합니다.
+  각 항목은 `analysis_run_id`로 분석과 연결되며, `item_order`는 위 우선순위로 정렬한 뒤 1부터 부여합니다. 같은 유형 안에서는 AI의 판단 순서를 유지합니다.
   `title`, `request_excerpt`, `reason`, `suggested_question`은 그대로 저장하고, `type`은 `classification`,
   `existing_baseline`은 `criteria_evidence`에 저장합니다. 빈 `findings`는 항목을 생성하지 않고 분석을 완료합니다.
 - UI의 Loading/CTA 비활성화, 질문 복사, 화면 이동은 프런트엔드에서 처리합니다. 파일 첨부는 하프톤 제외 조건에 따라 포함하지 않습니다.

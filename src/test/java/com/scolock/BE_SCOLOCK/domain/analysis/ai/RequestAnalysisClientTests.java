@@ -47,6 +47,7 @@ class RequestAnalysisClientTests {
         var mapper = JsonMapper.builder().build();
         var schema = mapper.readTree(((OpenAiChatOptions) prompt.getOptions()).getOutputSchema());
         assertThat(mapper.treeToValue(schema.get("required"), String[].class)).containsExactly("findings");
+        assertThat(schema.get("properties").get("findings").path("maxItems").asInt()).isEqualTo(3);
         var findingSchema = schema.get("properties").get("findings").get("items");
         assertThat(mapper.treeToValue(findingSchema.get("properties").get("type").get("enum"), String[].class))
                 .containsExactlyInAnyOrder("MISSING_INFO", "AMBIGUOUS", "BASELINE_CHANGE", "TECH_CHECK");
@@ -64,6 +65,40 @@ class RequestAnalysisClientTests {
                 "request_excerpt":"색상 변경","reason":"색상 값 누락","suggested_question":"어떤 색상인가요?"}]}
                 """, "stop");
         assertThat(client.analyze(null, "색상 변경").findings()).hasSize(1);
+    }
+
+    @Test
+    void acceptsThreeFindingsAndOrdersByPriority() {
+        respond(findingsJson("TECH_CHECK", "BASELINE_CHANGE", "MISSING_INFO"), "stop");
+        assertThat(client.analyze("기준", "요청").findings())
+                .extracting(finding -> finding.type().name())
+                .containsExactly("BASELINE_CHANGE", "MISSING_INFO", "TECH_CHECK");
+    }
+
+    @Test
+    void preservesOrderWithinTypeAndPlacesAmbiguousBeforeTechnicalCheck() {
+        respond(findingsJson("TECH_CHECK", "AMBIGUOUS", "AMBIGUOUS"), "stop");
+        assertThat(client.analyze("기준", "요청").findings())
+                .extracting(finding -> finding.title())
+                .containsExactly("확인 2", "확인 3", "확인 1");
+    }
+
+    @Test
+    void rejectsMoreThanThreeFindings() {
+        respond(findingsJson("BASELINE_CHANGE", "MISSING_INFO", "AMBIGUOUS", "TECH_CHECK"), "stop");
+        assertThatThrownBy(() -> client.analyze("기준", "요청"))
+                .isInstanceOfSatisfying(AnalysisAiException.class,
+                        e -> assertThat(e.getCode()).isEqualTo("AI_INVALID_RESPONSE"));
+    }
+
+    private String findingsJson(String... types) {
+        var findings = java.util.stream.IntStream.range(0, types.length)
+                .mapToObj(index -> """
+                        {"type":"%s","title":"확인 %d","existing_baseline":"기준",
+                        "request_excerpt":"요청","reason":"방향 오류 확인 필요","suggested_question":"확인해 주시겠어요?"}
+                        """.formatted(types[index], index + 1))
+                .collect(java.util.stream.Collectors.joining(","));
+        return "{\"findings\":[" + findings + "]}";
     }
 
     @ParameterizedTest
