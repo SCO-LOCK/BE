@@ -45,14 +45,14 @@ class EntityMappingTests {
         AnalysisRun run = persist(AnalysisRun.builder().clientRequest(request)
                 .criteriaVersion(version).resultJson(json).build());
         AnalysisItem item = persist(AnalysisItem.builder().analysisRun(run).itemOrder(1)
-                .requestExcerpt("수정 요청").classification(AnalysisClassification.NEEDS_REVIEW)
+                .requestExcerpt("수정 요청").classification(AnalysisClassification.MISSING_INFO)
                 .reason("상세 확인 필요").build());
         entityManager.flush();
         entityManager.clear();
 
         AnalysisItem loaded = entityManager.find(AnalysisItem.class, item.getId());
         AnalysisRun loadedRun = loaded.getAnalysisRun();
-        assertThat(loaded.getClassification()).isEqualTo(AnalysisClassification.NEEDS_REVIEW);
+        assertThat(loaded.getClassification()).isEqualTo(AnalysisClassification.MISSING_INFO);
         assertThat(loadedRun.getResultJson()).isEqualTo(json);
         assertThat(loadedRun.getStatus()).isEqualTo(AnalysisStatus.PENDING);
         assertThat(loadedRun.getClientRequest().getProject().getOwner().getKakaoId()).isEqualTo(100L);
@@ -119,10 +119,10 @@ class EntityMappingTests {
         ClientRequest request = persist(ClientRequest.builder().project(project).requestText("요청").build());
         AnalysisRun run = persist(AnalysisRun.builder().clientRequest(request).criteriaVersion(version).build());
         persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).requestExcerpt("요청")
-                .classification(AnalysisClassification.IN_SCOPE).reason("기준 내").build());
+                .classification(AnalysisClassification.AMBIGUOUS).reason("표현이 모호함").build());
         assertThatThrownBy(() -> {
             persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).requestExcerpt("요청")
-                    .classification(AnalysisClassification.OUT_OF_SCOPE).reason("기준 외").build());
+                    .classification(AnalysisClassification.BASELINE_CHANGE).reason("기준 변경 가능성").build());
             entityManager.flush();
         }).isInstanceOf(PersistenceException.class);
     }
