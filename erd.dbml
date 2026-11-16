@@ -165,6 +165,7 @@ Table analysis_items {
   id bigint [pk, increment]
   analysis_run_id bigint [not null]
   item_order int [not null]
+  title text [not null]
   request_excerpt text [not null]
   classification AnalysisClassification [not null]
   reason text [not null]

@@ -20,6 +20,11 @@ public class ClientRequestService {
     private final ProjectService projectService;
     private final ClientRequestRepository clientRequestRepository;
 
+    public ClientRequest getClientRequestByIdAndProjectId(Long requestId, Long projectId) {
+        return clientRequestRepository.findByIdAndProjectId(requestId, projectId)
+                .orElseThrow(() -> new GeneralException(ErrorStatus.CLIENT_REQUEST_NOT_FOUND));
+    }
+
     @Transactional
     public ClientRequestResponse create(Long projectId, Long userId, CreateClientRequestRequest input) {
         Project project = projectService.getProjectById(projectId);

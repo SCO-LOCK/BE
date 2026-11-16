@@ -74,6 +74,25 @@ public class AnalysisRun extends BaseEntity {
     @Column(name = "finished_at")
     private LocalDateTime finishedAt;
 
+    public void startProcessing() {
+        this.status = AnalysisStatus.PROCESSING;
+        this.startedAt = LocalDateTime.now();
+    }
+
+    public void complete(String resultJson, String modelName) {
+        this.resultJson = resultJson;
+        this.modelName = modelName;
+        this.status = AnalysisStatus.COMPLETED;
+        this.finishedAt = LocalDateTime.now();
+    }
+
+    public void fail(String code, String message) {
+        this.status = AnalysisStatus.FAILED;
+        this.errorCode = code;
+        this.errorMessage = message;
+        this.finishedAt = LocalDateTime.now();
+    }
+
     @Builder
     public AnalysisRun(
             ClientRequest clientRequest,

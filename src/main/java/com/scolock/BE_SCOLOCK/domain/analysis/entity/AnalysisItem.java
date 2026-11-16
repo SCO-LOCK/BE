@@ -37,7 +37,7 @@ public class AnalysisItem {
     @Column(name = "item_order", nullable = false)
     private Integer itemOrder;
 
-    @Column(name = "title", nullable = false)
+    @Column(name = "title", nullable = false, columnDefinition = "text")
     private String title;
 
     @Column(name = "request_excerpt", nullable = false, columnDefinition = "text")

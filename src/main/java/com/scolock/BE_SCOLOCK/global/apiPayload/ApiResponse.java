@@ -27,6 +27,10 @@ public class ApiResponse<T> {
         return new ApiResponse<>(SuccessStatus.CREATED.getCode(), SuccessStatus.CREATED.getMessage(), data);
     }
 
+    public static <T> ApiResponse<T> onAccepted(T data) {
+        return new ApiResponse<>(SuccessStatus.ACCEPTED.getCode(), SuccessStatus.ACCEPTED.getMessage(), data);
+    }
+
     public static <T> ApiResponse<T> onFailure(String code, String message, T data) {
         return new ApiResponse<>(code, message, data);
     }
