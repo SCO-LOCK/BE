@@ -107,11 +107,10 @@ DB 계정과 AI 키는 로컬과 동일한 환경 변수를 사용합니다. 기
 | 변수                                  | 설명                                                                      |
 |---------------------------------------|---------------------------------------------------------------------------|
 | `OPENAI_API_KEY`                      | OpenAI API 키 (필수)                                                      |
-| `SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL` | 분석에 사용할 모델. 기본값 `gpt-4o-mini`                                  |
+| `OPENAI_MODEL`                        | 분석에 사용할 모델. 기본값 `gpt-4o-mini`                                  |
 | `AI_ANALYSIS_TIMEOUT`                 | 워커의 AI 호출 제한 시간. 기본값 `60s`. HTTP 접수 응답의 대기 시간이 아님 |
 
-현재 YAML의 `OPENAI_MODEL`은 `spring.ai.openai.chat.model`에 연결되어 있지만, 분석 클라이언트는 `spring.ai.openai.chat.options.model`을 읽습니다.
-따라서 모델을 변경하려면 위 표의 `SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL`을 사용해야 합니다.
+`OPENAI_MODEL`은 YAML의 `spring.ai.openai.chat.model`에 연결되며, Spring AI와 분석 클라이언트가 같은 설정을 사용합니다.
 
 응답 형식은 [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)를 사용하며 필수 값, 유형, 원문
 인용과 완료 여부를 추가 검증합니다. 비용·책임·작업시간·크레딧·범위 내/외를 확정하지 않도록 시스템 프롬프트를 구성했습니다. 이는 모델에 대한 지시이므로 생성된 질문과 근거는 제작자가 확인해야 합니다. 자동 발송

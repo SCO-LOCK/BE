@@ -57,7 +57,7 @@ public class RequestAnalysisClient {
     private final BeanOutputConverter<AnalysisResult> converter = new BeanOutputConverter<>(AnalysisResult.class);
 
     public RequestAnalysisClient(ChatModel chatModel, JsonMapper mapper, Validator validator,
-                                 @Value("${spring.ai.openai.chat.options.model:gpt-4o-mini}") String model,
+                                 @Value("${spring.ai.openai.chat.model:gpt-4o-mini}") String model,
                                  @Value("${app.analysis.timeout:60s}") Duration timeout) {
         this.chatModel = chatModel;
         this.mapper = mapper;
