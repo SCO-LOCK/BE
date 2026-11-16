@@ -38,7 +38,10 @@ public class ClientRequestController {
                     + "ID 1 사용자가 소유한 기존 프로젝트에 요청 사항을 등록합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "201",
-                    description = "요청 사항 등록 성공", useReturnTypeSchema = true),
+                    description = "요청 사항 등록 성공", useReturnTypeSchema = true,
+                    content = @Content(mediaType = "application/json", examples = @ExampleObject(value = """
+                            {"code":"COMMON201","message":"생성이 완료되었습니다.","data":{"createdAt":"2026-11-14T15:00:00","requestText":"버튼 색상을 변경해 주세요.","projectId":1,"id":1}}
+                            """))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400",
                     description = "요청 내용 누락/빈 문자열/공백, 잘못된 JSON 또는 유효하지 않은 프로젝트 ID",
                     content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),

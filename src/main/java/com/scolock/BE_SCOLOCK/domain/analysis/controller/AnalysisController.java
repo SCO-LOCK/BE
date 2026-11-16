@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Analyses", description = "요청 사항 분석 생성 및 조회 API")
 @RestController
 @RequiredArgsConstructor
 public class AnalysisController {
@@ -29,7 +30,6 @@ public class AnalysisController {
 
     private final AnalysisService analysisService;
 
-    @Tag(name = "Analyses", description = "프로젝트별 요청 사항 분석 API")
     @Operation(summary = "요청 사항 분석 생성",
             description = "로그인 구현 전까지 사용자 ID를 1로 고정합니다. "
                     + "ID 1 사용자가 소유한 프로젝트의 최신 제작 기준으로 요청 사항을 비동기 분석합니다. "
@@ -107,20 +107,63 @@ public class AnalysisController {
         return ApiResponse.onAccepted(analysisService.create(projectId, requestId, TEMPORARY_USER_ID));
     }
 
-    @Tag(name = "Analysis", description = "AI 분석 조회 API")
     @Operation(summary = "AI 분석 조회",
             description = "분석 실행의 상태를 조회합니다. "
                     + "COMPLETED 상태일 때만 분석 결과를 반환합니다. "
-                    + "로그인 구현 전까지 사용자 ID는 1로 고정합니다."
-    )
-    @GetMapping(value = "/analyses/{analysisId}")
+                    + "대기·진행·실패 상태도 HTTP 200으로 반환하며, 실패 원인은 공개용 오류 정보로 제공합니다. "
+                    + "로그인 구현 전까지 사용자 ID는 1로 고정합니다.")
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200",
+                    description = "분석 상태 및 결과 조회 성공", useReturnTypeSchema = true,
+                    content = @Content(mediaType = "application/json", examples = {
+                                    @ExampleObject(name = "대기 중", value = """
+                                            {"code":"COMMON200","message":"요청이 성공했습니다.","data":{"id":1,"status":"PENDING","reviewCount":0,"items":[],"errorCode":null,"message":null}}
+                                            """),
+                                    @ExampleObject(name = "분석 중", value = """
+                                            {"code":"COMMON200","message":"요청이 성공했습니다.","data":{"id":1,"status":"PROCESSING","reviewCount":0,"items":[],"errorCode":null,"message":null}}
+                                            """),
+                                    @ExampleObject(name = "분석 완료", value = """
+                                            {"code":"COMMON200","message":"요청이 성공했습니다.","data":{"id":1,"status":"COMPLETED","reviewCount":1,"items":[{"id":1,"itemOrder":1,"title":"버튼 색상 확인","classification":"MISSING_INFO","criteriaEvidence":null,"requestExcerpt":"버튼 색상을 변경해 주세요.","reason":"변경할 색상이 지정되지 않았습니다.","suggestedQuestion":"버튼을 어떤 색상으로 변경할까요?"}],"errorCode":null,"message":null}}
+                                            """),
+                                    @ExampleObject(name = "확인 사항 없음", value = """
+                                            {"code":"COMMON200","message":"요청이 성공했습니다.","data":{"id":1,"status":"COMPLETED","reviewCount":0,"items":[],"errorCode":null,"message":null}}
+                                            """),
+                                    @ExampleObject(name = "분석 실패", value = """
+                                            {"code":"COMMON200","message":"요청이 성공했습니다.","data":{"id":1,"status":"FAILED","reviewCount":0,"items":[],"errorCode":"ANALYSIS_EXECUTION_FAILED","message":"분석을 완료하지 못했습니다."}}
+                                            """)
+                            })),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400",
+                    description = "유효하지 않은 분석 ID",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {"code":"COMMON400","message":"잘못된 요청입니다.","data":{"analysisId":"분석 ID는 양수여야 합니다."}}
+                                    """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403",
+                    description = "ID 1 사용자의 분석이 아님",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {"code":"COMMON403","message":"접근 권한이 없습니다.","data":null}
+                                    """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404",
+                    description = "존재하지 않는 분석",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {"code":"ANALYSIS404","message":"분석을 찾을 수 없습니다.","data":null}
+                                    """))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500",
+                    description = "서버 내부 오류",
+                    content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(value = """
+                                    {"code":"COMMON500","message":"서버 내부 오류가 발생했습니다.","data":null}
+                                    """)))
+    })
+    @GetMapping("/analyses/{analysisId}")
     public ApiResponse<AnalysisResponse> getAnalysis(
-            @Parameter(description = "분석 실행 ID", example = "1")
+            @Parameter(description = "분석 실행 ID (양의 정수)", example = "1", required = true)
             @PathVariable("analysisId")
             @Positive(message = "분석 ID는 양수여야 합니다.")
             Long analysisId
     ) {
-        AnalysisResponse response = analysisService.getAnalysis(analysisId, TEMPORARY_USER_ID);
-        return ApiResponse.onSuccess(response);
+        return ApiResponse.onSuccess(analysisService.getAnalysis(analysisId, TEMPORARY_USER_ID));
     }
 }
