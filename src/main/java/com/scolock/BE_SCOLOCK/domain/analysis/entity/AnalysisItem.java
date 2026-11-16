@@ -37,6 +37,9 @@ public class AnalysisItem {
     @Column(name = "item_order", nullable = false)
     private Integer itemOrder;
 
+    @Column(name = "title", nullable = false, columnDefinition = "text")
+    private String title;
+
     @Column(name = "request_excerpt", nullable = false, columnDefinition = "text")
     private String requestExcerpt;
 
@@ -57,6 +60,7 @@ public class AnalysisItem {
     public AnalysisItem(
             AnalysisRun analysisRun,
             Integer itemOrder,
+            String title,
             String requestExcerpt,
             AnalysisClassification classification,
             String reason,
@@ -65,6 +69,7 @@ public class AnalysisItem {
     ) {
         this.analysisRun = analysisRun;
         this.itemOrder = itemOrder;
+        this.title = title;
         this.requestExcerpt = requestExcerpt;
         this.classification = classification;
         this.reason = reason;

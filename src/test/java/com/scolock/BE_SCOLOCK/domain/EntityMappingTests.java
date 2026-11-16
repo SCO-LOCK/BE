@@ -44,7 +44,7 @@ class EntityMappingTests {
         String json = "{\"summary\":\"검토 필요\",\"count\":1}";
         AnalysisRun run = persist(AnalysisRun.builder().clientRequest(request)
                 .criteriaVersion(version).resultJson(json).build());
-        AnalysisItem item = persist(AnalysisItem.builder().analysisRun(run).itemOrder(1)
+        AnalysisItem item = persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).title("확인 사항")
                 .requestExcerpt("수정 요청").classification(AnalysisClassification.MISSING_INFO)
                 .reason("상세 확인 필요").build());
         entityManager.flush();
@@ -118,10 +118,10 @@ class EntityMappingTests {
         CriteriaVersion version = persist(CriteriaVersion.builder().project(project).versionNo(1).build());
         ClientRequest request = persist(ClientRequest.builder().project(project).requestText("요청").build());
         AnalysisRun run = persist(AnalysisRun.builder().clientRequest(request).criteriaVersion(version).build());
-        persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).requestExcerpt("요청")
+        persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).title("확인 사항").requestExcerpt("요청")
                 .classification(AnalysisClassification.AMBIGUOUS).reason("표현이 모호함").build());
         assertThatThrownBy(() -> {
-            persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).requestExcerpt("요청")
+            persist(AnalysisItem.builder().analysisRun(run).itemOrder(1).title("확인 사항").requestExcerpt("요청")
                     .classification(AnalysisClassification.BASELINE_CHANGE).reason("기준 변경 가능성").build());
             entityManager.flush();
         }).isInstanceOf(PersistenceException.class);

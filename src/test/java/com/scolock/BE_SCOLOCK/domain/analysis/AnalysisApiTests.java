@@ -9,6 +9,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import static org.mockito.Mockito.*;
 import com.jayway.jsonpath.JsonPath;
 import com.scolock.BE_SCOLOCK.domain.analysis.entity.AnalysisRun;
+import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisItemRepository;
 import com.scolock.BE_SCOLOCK.domain.analysis.enums.AnalysisStatus;
 import com.scolock.BE_SCOLOCK.domain.analysis.enums.AnalysisClassification;
 import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisRunRepository;
@@ -46,6 +47,7 @@ class AnalysisApiTests {
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
     @Autowired private AnalysisRunRepository analysisRunRepository;
+    @Autowired private AnalysisItemRepository analysisItemRepository;
 
     @MockitoBean private RequestAnalysisClient aiClient;
     @MockitoBean private AnalysisWorker analysisWorker;
@@ -209,6 +211,9 @@ class AnalysisApiTests {
         var finding = new AnalysisResult.Finding(AnalysisClassification.MISSING_INFO,
                 "색상 확인", "제작 기준", "버튼 색상 변경", "색상 값이 없습니다.", "어떤 색상으로 변경할까요?");
 
+        var secondFinding = new AnalysisResult.Finding(AnalysisClassification.TECH_CHECK,
+                "구현 확인", "", "애니메이션 추가", "구현 가능 여부 확인이 필요합니다.", "지원 환경은 무엇인가요?");
+
         String body = submit(project.getId(), request.getId()).andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.data.analysisId").isNumber())
                 .andExpect(jsonPath("$.data.status").doesNotHaveJsonPath())
@@ -217,7 +222,7 @@ class AnalysisApiTests {
                 .andReturn().getResponse().getContentAsString();
         Number id = JsonPath.read(body, "$.data.analysisId");
         persistence.markProcessing(id.longValue());
-        persistence.complete(id.longValue(), new AnalysisResult(java.util.List.of(finding)), "test-model");
+        persistence.complete(id.longValue(), new AnalysisResult(java.util.List.of(finding, secondFinding)), "test-model");
         entityManager.flush();
         entityManager.clear();
         AnalysisRun saved = analysisRunRepository.findById(id.longValue()).orElseThrow();
@@ -226,6 +231,36 @@ class AnalysisApiTests {
         assertThat(result.<String>read("$.findings[0].type")).isEqualTo("MISSING_INFO");
         assertThat(result.<String>read("$.findings[0].suggested_question"))
                 .isEqualTo("어떤 색상으로 변경할까요?");
+        assertThat(result.<java.util.List<?>>read("$.findings")).hasSize(2);
+        var items = analysisItemRepository.findAllByAnalysisRunIdOrderByItemOrderAsc(id.longValue());
+        assertThat(items).hasSize(2);
+        var expected = java.util.List.of(finding, secondFinding);
+        for (int index = 0; index < expected.size(); index++) {
+            var item = items.get(index);
+            var source = expected.get(index);
+            assertThat(item.getAnalysisRun().getId()).isEqualTo(id.longValue());
+            assertThat(item.getItemOrder()).isEqualTo(index + 1);
+            assertThat(item.getTitle()).isEqualTo(source.title());
+            assertThat(item.getClassification()).isEqualTo(source.type());
+            assertThat(item.getRequestExcerpt()).isEqualTo(source.requestExcerpt());
+            assertThat(item.getReason()).isEqualTo(source.reason());
+            assertThat(item.getCriteriaEvidence()).isEqualTo(source.existingBaseline());
+            assertThat(item.getSuggestedQuestion()).isEqualTo(source.suggestedQuestion());
+        }
+    }
+
+    @Test
+    void completesEmptyFindingsWithoutCreatingItems() {
+        var input = persistence.start(project.getId(), request.getId(), 1L);
+        persistence.markProcessing(input.analysisId());
+        persistence.complete(input.analysisId(), new AnalysisResult(java.util.List.of()), "test-model");
+        entityManager.flush();
+        entityManager.clear();
+
+        var saved = analysisRunRepository.findById(input.analysisId()).orElseThrow();
+        assertThat(saved.getStatus()).isEqualTo(AnalysisStatus.COMPLETED);
+        assertThat(JsonPath.parse(saved.getResultJson()).<java.util.List<?>>read("$.findings")).isEmpty();
+        assertThat(analysisItemRepository.findAllByAnalysisRunIdOrderByItemOrderAsc(input.analysisId())).isEmpty();
     }
 
     @Test

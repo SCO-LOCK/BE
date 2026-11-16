@@ -2,9 +2,11 @@ package com.scolock.BE_SCOLOCK.domain.analysis.service;
 
 import com.scolock.BE_SCOLOCK.domain.analysis.ai.RequestAnalysisClient;
 import com.scolock.BE_SCOLOCK.domain.analysis.dto.AnalysisResult;
+import com.scolock.BE_SCOLOCK.domain.analysis.entity.AnalysisItem;
 import com.scolock.BE_SCOLOCK.domain.analysis.entity.AnalysisRun;
 import com.scolock.BE_SCOLOCK.domain.analysis.enums.AnalysisStatus;
 import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisRunRepository;
+import com.scolock.BE_SCOLOCK.domain.analysis.repository.AnalysisItemRepository;
 import com.scolock.BE_SCOLOCK.domain.criteria.entity.CriteriaVersion;
 import com.scolock.BE_SCOLOCK.domain.criteria.service.CriteriaVersionService;
 import com.scolock.BE_SCOLOCK.domain.project.entity.Project;
@@ -14,6 +16,7 @@ import com.scolock.BE_SCOLOCK.domain.request.service.ClientRequestService;
 import com.scolock.BE_SCOLOCK.global.apiPayload.code.status.ErrorStatus;
 import com.scolock.BE_SCOLOCK.global.exception.GeneralException;
 import java.util.List;
+import java.util.stream.IntStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ public class AnalysisPersistenceService {
     private final ClientRequestService clientRequestService;
     private final CriteriaVersionService criteriaVersionService;
     private final AnalysisRunRepository analysisRunRepository;
+    private final AnalysisItemRepository analysisItemRepository;
 
     public AnalysisRun getAnalysisRunById(Long id) {
         return analysisRunRepository.findById(id)
@@ -71,6 +75,22 @@ public class AnalysisPersistenceService {
     @Transactional
     public void complete(Long id, AnalysisResult result, String model) {
         AnalysisRun run = getAnalysisRunById(id);
+        List<AnalysisItem> items = IntStream.range(0, result.findings().size())
+                .mapToObj(index -> {
+                    AnalysisResult.Finding finding = result.findings().get(index);
+                    return AnalysisItem.builder()
+                            .analysisRun(run)
+                            .itemOrder(index + 1)
+                            .title(finding.title())
+                            .requestExcerpt(finding.requestExcerpt())
+                            .classification(finding.type())
+                            .reason(finding.reason())
+                            .criteriaEvidence(finding.existingBaseline())
+                            .suggestedQuestion(finding.suggestedQuestion())
+                            .build();
+                })
+                .toList();
+        analysisItemRepository.saveAll(items);
         run.complete(mapper.writeValueAsString(result), model);
     }
 

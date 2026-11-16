@@ -92,8 +92,10 @@ DB 계정과 AI 키는 로컬과 동일한 환경 변수를 사용합니다. 기
 - 작업 큐가 가득 차 접수하지 못하면 해당 분석을 `FAILED`, 오류 코드 `ANALYSIS_UNAVAILABLE`로 저장하고 HTTP 503을 반환합니다.
 - 실패해도 요청 원문은 보존되며 같은 POST를 다시 호출하면 새 분석 기록으로 재시도합니다. 실행 중인 같은 요청의 중복 호출은 HTTP 409입니다.
 - 분석을 기다리는 동안 DB 트랜잭션을 열어 두지 않습니다. 서버가 강제 종료되어 `PENDING` 또는 `PROCESSING` 기록이 남은 경우에는 해당 기록을 운영자가 실패 처리한 뒤 재시도해야 합니다.
-- 결과는 `analysis_runs.result_json`에 저장합니다. AI 결과와 `analysis_items`는 공통 `AnalysisClassification` enum을 사용하며, 이번 AI 분석 결과는
-  `analysis_items`에 별도로 저장하지 않습니다.
+- 결과 전체는 `analysis_runs.result_json`에 저장하고, `findings`의 각 항목은 같은 트랜잭션에서 `analysis_items`에 저장합니다.
+  각 항목은 `analysis_run_id`로 분석과 연결되며, `item_order`는 응답 배열 순서대로 1부터 부여합니다.
+  `title`, `request_excerpt`, `reason`, `suggested_question`은 그대로 저장하고, `type`은 `classification`,
+  `existing_baseline`은 `criteria_evidence`에 저장합니다. 빈 `findings`는 항목을 생성하지 않고 분석을 완료합니다.
 - UI의 Loading/CTA 비활성화, 질문 복사, 화면 이동은 프런트엔드에서 처리합니다. 파일 첨부는 하프톤 제외 조건에 따라 포함하지 않습니다.
 - 현재 기존 API와 동일하게 사용자 ID 1을 사용합니다.
 
