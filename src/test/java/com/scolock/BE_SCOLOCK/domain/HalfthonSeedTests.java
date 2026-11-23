@@ -41,7 +41,7 @@ class HalfthonSeedTests {
                 .containsExactly("전체적으로 조금 더 트렌디하게 해주세요.", "전체적으로 조금 더 트렌디하게 해주세요.");
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM analysis_runs", Integer.class)).isZero();
 
-        jdbc.update("UPDATE projects SET description = '테스트 중 수정한 설명' WHERE id = 1");
+        jdbc.update("UPDATE projects SET name = '테스트 중 수정한 프로젝트 이름' WHERE id = 1");
         var populator = new ResourceDatabasePopulator(new ClassPathResource("data.sql"));
         populator.setSqlScriptEncoding("UTF-8");
         populator.execute(dataSource);
@@ -50,8 +50,8 @@ class HalfthonSeedTests {
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM projects", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM criteria_versions", Integer.class)).isEqualTo(1);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM client_requests", Integer.class)).isEqualTo(8);
-        assertThat(jdbc.queryForObject("SELECT description FROM projects WHERE id = 1", String.class))
-                .isEqualTo("테스트 중 수정한 설명");
+        assertThat(jdbc.queryForObject("SELECT name FROM projects WHERE id = 1", String.class))
+                .isEqualTo("테스트 중 수정한 프로젝트 이름");
 
         jdbc.update("INSERT INTO client_requests (project_id, request_text, created_at, updated_at) VALUES (1, '추가 요청', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)");
         assertThat(jdbc.queryForObject("SELECT id FROM client_requests WHERE request_text = '추가 요청'", Long.class))
