@@ -43,9 +43,6 @@ public class Project extends BaseEntity {
     @Column(name = "client_name", length = 150)
     private String clientName;
 
-    @Column(name = "description", columnDefinition = "text")
-    private String description;
-
     @Enumerated(EnumType.STRING)
     @ColumnDefault("'ACTIVE'")
     @Column(name = "status", nullable = false)
@@ -56,13 +53,11 @@ public class Project extends BaseEntity {
             User owner,
             String name,
             String clientName,
-            String description,
             ProjectStatus status
     ) {
         this.owner = owner;
         this.name = name;
         this.clientName = clientName;
-        this.description = description;
         this.status = status == null ? ProjectStatus.ACTIVE : status;
     }
 }
