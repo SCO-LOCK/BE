@@ -44,7 +44,7 @@ public class ProjectController {
                                     {"code":"COMMON400","message":"잘못된 요청입니다.","data":null}""")
                     })
             ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404",
                     description = "사용자 ID 1에 해당하는 사용자가 없음", content = @Content(mediaType = "application/json", schema = @Schema(implementation = ApiResponse.class),
                     examples = @ExampleObject(value = """
                             {"code":"COMMON404","message":"요청한 리소스를 찾을 수 없습니다.","data":null}

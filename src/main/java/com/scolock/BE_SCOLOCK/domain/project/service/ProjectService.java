@@ -35,7 +35,7 @@ public class ProjectService {
         boolean hasFile = input.file() != null && !input.file().isEmpty();
 
         // 기존 제작 기준인 텍스트나 파일 중 하나라도 있어야함.
-        if (!hasText || hasFile) {
+        if (!hasText || !hasFile) {
             throw new GeneralException(ErrorStatus.BAD_REQUEST);
         }
 
@@ -45,7 +45,7 @@ public class ProjectService {
         Project project = projectRepository.save(Project.builder()
                 .owner(owner)
                 .name(input.name().strip())
-                .clientName(input.clientName())
+                .clientName(input.clientName() == null ? null : input.clientName().strip())
                 .build());
 
         CriteriaVersion version = criteriaVersionRepository.save(
