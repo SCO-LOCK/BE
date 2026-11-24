@@ -8,9 +8,8 @@ INSERT INTO users (id, kakao_id, email, display_name, created_at, updated_at)
 SELECT 1, 900000000001, 'halfthon@example.com', '하프톤 테스트 사용자', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE id = 1);
 
-INSERT INTO projects (id, owner_id, name, client_name, description, status, created_at, updated_at)
+INSERT INTO projects (id, owner_id, name, client_name, status, created_at, updated_at)
 SELECT 1, 1, 'LUMEN 남성 향수 SNS 광고', 'LUMEN',
-       '사전 설정된 제작 기준으로 클라이언트 요청을 분석하는 하프톤 테스트 프로젝트',
        'ACTIVE', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
 WHERE NOT EXISTS (SELECT 1 FROM projects WHERE id = 1);
 

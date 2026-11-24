@@ -57,7 +57,6 @@ Table projects {
   owner_id bigint [not null]
   name varchar(150) [not null]
   client_name varchar(150)
-  description text
   status ProjectStatus [not null, default: 'ACTIVE']
   created_at datetime [not null]
   updated_at datetime [not null]
@@ -111,8 +110,25 @@ Table criteria_files {
   Note: '제작 기준 첨부파일 및 텍스트 추출 결과'
 }
 
+
 // ======================================
-// 5. 클라이언트 요청사항
+// 5. 프로젝트에 작성되거나 첨부한 기존 제작 기준을 AI가 분석 후 정리
+// ======================================
+Table criteria_summaries {
+  criteria_version_id bigint [pk]
+  status AnalysisStatus [not null, default: 'PENDING']
+  summary_json json
+  model_name varchar(100)
+  prompt_version varchar(40)
+  error_message varchar(500)
+  created_at datetime [not null]
+  updated_at datetime [not null]
+  finished_at datetime
+
+  Note: '제작 기준 버전별 AI 정리 결과'
+}
+// ======================================
+// 6. 클라이언트 요청사항
 // ======================================
 
 Table client_requests {
@@ -130,7 +146,7 @@ Table client_requests {
 }
 
 // ======================================
-// 6. AI 분석 실행 기록
+// 7. AI 분석 실행 기록
 // ======================================
 
 Table analysis_runs {
@@ -158,7 +174,7 @@ Table analysis_runs {
 }
 
 // ======================================
-// 7. AI 분석 세부 항목
+// 8. AI 분석 세부 항목
 // ======================================
 
 Table analysis_items {
@@ -191,6 +207,9 @@ Ref: criteria_versions.project_id > projects.id [delete: restrict, update: restr
 
 // 제작 기준 버전 → 첨부파일 (1:N)
 Ref: criteria_files.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
+
+// (프로젝트 당 제작 기준 1개) 제작 기준 버전 -> AI 분석 실행
+Ref: criteria_versions.id - criteria_summaries.criteria_version [delete: restrict, update: restrict]
 
 // 프로젝트 → 클라이언트 요청사항 (1:N)
 Ref: client_requests.project_id > projects.id [delete: restrict, update: restrict]
