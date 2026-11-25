@@ -22,6 +22,11 @@ Enum AnalysisStatus {
   FAILED
 }
 
+Enum CriteriaVersionStatus {
+  DRAFT
+  CONFIRMED
+}
+
 Enum AnalysisClassification {
   IN_SCOPE
   OUT_OF_SCOPE
@@ -76,7 +81,9 @@ Table criteria_versions {
   id bigint [pk, increment]
   project_id bigint [not null]
   version_no int [not null]
-  criteria_text longtext
+  source_text longtext [note: '사용자가 직접 입력한 제작 기준 추출용 원본 텍스트']
+  status CriteriaVersionStatus [not null, default: 'DRAFT']
+  confirmed_at datetime
   created_at datetime [not null]
   updated_at datetime [not null]
 
@@ -84,7 +91,7 @@ Table criteria_versions {
     (project_id, version_no) [unique, name: 'uk_criteria_project_version']
   }
 
-  Note: '프로젝트별 제작 기준과 변경 이력'
+  Note: '프로젝트별 제작 기준 버전 및 사용자 확정 상태 관리'
 }
 
 // ======================================
@@ -98,7 +105,7 @@ Table criteria_files {
   original_filename varchar(255) [not null]
   mime_type varchar(120) [not null]
   file_size_bytes bigint [not null]
-  extraction_status ExtractionStatus [not null, default: 'PENDING']
+  text_extraction_status ExtractionStatus [not null, default: 'PENDING']
   extracted_text longtext
   created_at datetime [not null]
   updated_at datetime [not null]
@@ -107,28 +114,57 @@ Table criteria_files {
     criteria_version_id [name: 'idx_criteria_files_version']
   }
 
-  Note: '제작 기준 첨부파일 및 텍스트 추출 결과'
+  Note: '제작 기준 첨부파일 및 파일에서 추출한 텍스트'
 }
 
+// ======================================
+// 5. AI 제작 기준 추출 실행 기록
+// ======================================
 
-// ======================================
-// 5. 프로젝트에 작성되거나 첨부한 기존 제작 기준을 AI가 분석 후 정리
-// ======================================
-Table criteria_summaries {
-  criteria_version_id bigint [pk]
+Table criteria_extraction_runs {
+  id bigint [pk, increment]
+  criteria_version_id bigint [not null]
   status AnalysisStatus [not null, default: 'PENDING']
-  summary_json json
+  result_json json [note: 'AI가 생성한 원본 추출 결과']
   model_name varchar(100)
   prompt_version varchar(40)
+  error_code varchar(60)
   error_message varchar(500)
   created_at datetime [not null]
   updated_at datetime [not null]
+  started_at datetime
   finished_at datetime
 
-  Note: '제작 기준 버전별 AI 정리 결과'
+  indexes {
+    (criteria_version_id, created_at) [name: 'idx_extraction_version_created']
+    (status, created_at) [name: 'idx_extraction_status_created']
+  }
+
+  Note: 'AI 제작 기준 추출 실행 상태 및 원본 결과 기록'
 }
+
 // ======================================
-// 6. 클라이언트 요청사항
+// 6. 개별 제작 기준
+// ======================================
+
+Table criteria_items {
+  id bigint [pk, increment]
+  criteria_version_id bigint [not null]
+  item_order int [not null]
+  title varchar(200) [not null]
+  content text [not null]
+  created_at datetime [not null]
+  updated_at datetime [not null]
+
+  indexes {
+    (criteria_version_id, item_order) [unique, name: 'uk_criteria_items_order']
+  }
+
+  Note: 'AI가 추출한 후 사용자가 검토, 수정 및 확정하는 개별 제작 기준'
+}
+
+// ======================================
+// 7. 클라이언트 요청사항
 // ======================================
 
 Table client_requests {
@@ -146,7 +182,7 @@ Table client_requests {
 }
 
 // ======================================
-// 7. AI 분석 실행 기록
+// 8. AI 분석 실행 기록
 // ======================================
 
 Table analysis_runs {
@@ -174,7 +210,7 @@ Table analysis_runs {
 }
 
 // ======================================
-// 8. AI 분석 세부 항목
+// 9. AI 분석 세부 항목
 // ======================================
 
 Table analysis_items {
@@ -208,8 +244,11 @@ Ref: criteria_versions.project_id > projects.id [delete: restrict, update: restr
 // 제작 기준 버전 → 첨부파일 (1:N)
 Ref: criteria_files.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
 
-// (프로젝트 당 제작 기준 1개) 제작 기준 버전 -> AI 분석 실행
-Ref: criteria_versions.id - criteria_summaries.criteria_version [delete: restrict, update: restrict]
+// 제작 기준 버전 → AI 제작 기준 추출 실행 (1:N)
+Ref: criteria_extraction_runs.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
+
+// 제작 기준 버전 → 개별 제작 기준 (1:N)
+Ref: criteria_items.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
 
 // 프로젝트 → 클라이언트 요청사항 (1:N)
 Ref: client_requests.project_id > projects.id [delete: restrict, update: restrict]
