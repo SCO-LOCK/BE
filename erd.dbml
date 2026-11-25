@@ -1,8 +1,12 @@
-
 Project SCOLOCK {
   database_type: 'MySQL'
   Note: 'SCO/LOCK 1차 MVP'
 }
+
+
+// ======================================
+// Enum
+// ======================================
 
 Enum ProjectStatus {
   ACTIVE
@@ -15,7 +19,7 @@ Enum ExtractionStatus {
   FAILED
 }
 
-Enum AnalysisStatus {
+Enum AiRunStatus {
   PENDING
   PROCESSING
   COMPLETED
@@ -27,14 +31,15 @@ Enum CriteriaVersionStatus {
   CONFIRMED
 }
 
-Enum AnalysisClassification {
+Enum RequestAnalysisClassification {
   IN_SCOPE
   OUT_OF_SCOPE
   NEEDS_REVIEW
 }
 
 // created_at / updated_at은 BaseEntity의 JPA Auditing으로 관리하며 DB 기본값을 두지 않는다.
-// 시간 컬럼은 논리 모델에서 정밀도를 생략한다. 실제 JPA 생성 DDL은 Hibernate/DB 기본 정밀도를 따른다.
+// 시간 컬럼은 논리 모델에서 정밀도를 생략한다.
+// 실제 JPA 생성 DDL은 Hibernate/DB 기본 정밀도를 따른다.
 
 // ======================================
 // 1. 사용자 (카카오 로그인)
@@ -124,7 +129,7 @@ Table criteria_files {
 Table criteria_extraction_runs {
   id bigint [pk, increment]
   criteria_version_id bigint [not null]
-  status AnalysisStatus [not null, default: 'PENDING']
+  status AiRunStatus [not null, default: 'PENDING']
   result_json json [note: 'AI가 생성한 원본 추출 결과']
   model_name varchar(100)
   prompt_version varchar(40)
@@ -182,15 +187,15 @@ Table client_requests {
 }
 
 // ======================================
-// 8. AI 분석 실행 기록
+// 8. AI 요청사항 분석 실행 기록
 // ======================================
 
-Table analysis_runs {
+Table request_analysis_runs {
   id bigint [pk, increment]
   client_request_id bigint [not null]
   criteria_version_id bigint [not null]
-  status AnalysisStatus [not null, default: 'PENDING']
-  result_json json
+  status AiRunStatus [not null, default: 'PENDING']
+  result_json json [note: 'AI가 생성한 원본 분석 결과']
   model_name varchar(100)
   prompt_version varchar(40)
   error_code varchar(60)
@@ -201,34 +206,34 @@ Table analysis_runs {
   finished_at datetime
 
   indexes {
-    (client_request_id, created_at) [name: 'idx_analysis_request_created']
-    criteria_version_id [name: 'idx_analysis_criteria']
-    (status, created_at) [name: 'idx_analysis_status_created']
+    (client_request_id, created_at) [name: 'idx_request_analysis_request_created']
+    criteria_version_id [name: 'idx_request_analysis_criteria']
+    (status, created_at) [name: 'idx_request_analysis_status_created']
   }
 
-  Note: 'AI 분석 실행 상태와 결과 기록'
+  Note: '확정된 제작 기준과 클라이언트 요청사항의 AI 비교 분석 실행 기록'
 }
 
 // ======================================
-// 9. AI 분석 세부 항목
+// 9. AI 요청사항 분석 세부 항목
 // ======================================
 
-Table analysis_items {
+Table request_analysis_items {
   id bigint [pk, increment]
-  analysis_run_id bigint [not null]
+  request_analysis_run_id bigint [not null]
   item_order int [not null]
   title text [not null]
   request_excerpt text [not null]
-  classification AnalysisClassification [not null]
+  classification RequestAnalysisClassification [not null]
   reason text [not null]
   criteria_evidence text
   suggested_question text
 
   indexes {
-    (analysis_run_id, item_order) [unique, name: 'uk_analysis_items_order']
+    (request_analysis_run_id, item_order) [unique, name: 'uk_request_analysis_items_order']
   }
 
-  Note: '개별 요청사항에 대한 AI 판단과 근거'
+  Note: '개별 요청사항에 대한 AI 판단, 근거 및 확인 질문'
 }
 
 // ======================================
@@ -253,11 +258,11 @@ Ref: criteria_items.criteria_version_id > criteria_versions.id [delete: restrict
 // 프로젝트 → 클라이언트 요청사항 (1:N)
 Ref: client_requests.project_id > projects.id [delete: restrict, update: restrict]
 
-// 클라이언트 요청사항 → AI 분석 실행 (1:N)
-Ref: analysis_runs.client_request_id > client_requests.id [delete: restrict, update: restrict]
+// 클라이언트 요청사항 → AI 요청사항 분석 실행 (1:N)
+Ref: request_analysis_runs.client_request_id > client_requests.id [delete: restrict, update: restrict]
 
-// 제작 기준 버전 → AI 분석 실행 (1:N)
-Ref: analysis_runs.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
+// 제작 기준 버전 → AI 요청사항 분석 실행 (1:N)
+Ref: request_analysis_runs.criteria_version_id > criteria_versions.id [delete: restrict, update: restrict]
 
-// AI 분석 실행 → 세부 분석 항목 (1:N)
-Ref: analysis_items.analysis_run_id > analysis_runs.id [delete: restrict, update: restrict]
+// AI 요청사항 분석 실행 → 세부 분석 항목 (1:N)
+Ref: request_analysis_items.request_analysis_run_id > request_analysis_runs.id [delete: restrict, update: restrict]
