@@ -8,11 +8,6 @@ Project SCOLOCK {
 // Enum
 // ======================================
 
-Enum ProjectStatus {
-  ACTIVE
-  ARCHIVED
-}
-
 Enum ExtractionStatus {
   PENDING
   COMPLETED
@@ -32,9 +27,10 @@ Enum CriteriaVersionStatus {
 }
 
 Enum RequestAnalysisClassification {
-  IN_SCOPE
-  OUT_OF_SCOPE
-  NEEDS_REVIEW
+  MISSING_INFO
+  AMBIGUOUS
+  BASELINE_CHANGE
+  TECH_CHECK
 }
 
 // created_at / updated_at은 BaseEntity의 JPA Auditing으로 관리하며 DB 기본값을 두지 않는다.
@@ -65,9 +61,8 @@ Table users {
 Table projects {
   id bigint [pk, increment]
   owner_id bigint [not null]
-  name varchar(150) [not null]
-  client_name varchar(150)
-  status ProjectStatus [not null, default: 'ACTIVE']
+  name varchar(30) [not null]
+  client_name varchar(30)
   created_at datetime [not null]
   updated_at datetime [not null]
 
@@ -86,7 +81,7 @@ Table criteria_versions {
   id bigint [pk, increment]
   project_id bigint [not null]
   version_no int [not null]
-  source_text longtext [note: '사용자가 직접 입력한 제작 기준 추출용 원본 텍스트']
+  source_text varchar(2000) [note: '사용자가 직접 입력한 제작 원문. 후보 저장 성공 시 같은 트랜잭션에서 NULL로 비우고, 추출 실패 시 수정 및 수동 재시도를 위해 보존한다.']
   status CriteriaVersionStatus [not null, default: 'DRAFT']
   confirmed_at datetime
   created_at datetime [not null]
@@ -111,7 +106,8 @@ Table criteria_files {
   mime_type varchar(120) [not null]
   file_size_bytes bigint [not null]
   text_extraction_status ExtractionStatus [not null, default: 'PENDING']
-  extracted_text longtext
+  extracted_text longtext [note: '작업 중 임시 추출문. 제작 기준 후보 저장 성공 시 같은 트랜잭션에서 NULL로 비운다.']
+  delete_requested_at datetime [note: '원본 파일 삭제를 요청한 시각. 삭제 대기 및 재시도 대상 식별에 사용']
   created_at datetime [not null]
   updated_at datetime [not null]
 
@@ -138,6 +134,7 @@ Table criteria_extraction_runs {
   created_at datetime [not null]
   updated_at datetime [not null]
   started_at datetime
+  llm_called_at datetime [note: '실제 LLM 호출 시각. 호출 전에는 NULL이며 호출 후 실패해도 유지한다.']
   finished_at datetime
 
   indexes {
@@ -158,6 +155,7 @@ Table criteria_items {
   item_order int [not null]
   title varchar(200) [not null]
   content text [not null]
+  source_ids json [note: '이 카드를 추출한 입력 텍스트·첨부파일의 출처 ID 배열']
   created_at datetime [not null]
   updated_at datetime [not null]
 
@@ -175,7 +173,7 @@ Table criteria_items {
 Table client_requests {
   id bigint [pk, increment]
   project_id bigint [not null]
-  request_text longtext [not null]
+  request_text varchar(2000) [not null]
   created_at datetime [not null]
   updated_at datetime [not null]
 
@@ -203,6 +201,7 @@ Table request_analysis_runs {
   created_at datetime [not null]
   updated_at datetime [not null]
   started_at datetime
+  llm_called_at datetime [note: '실제 LLM 호출 시각. 호출 전에는 NULL이며 호출 후 실패해도 유지한다.']
   finished_at datetime
 
   indexes {
@@ -223,11 +222,11 @@ Table request_analysis_items {
   request_analysis_run_id bigint [not null]
   item_order int [not null]
   title text [not null]
-  request_excerpt text [not null]
+  request_excerpt text
   classification RequestAnalysisClassification [not null]
   reason text [not null]
   criteria_evidence text
-  suggested_question text
+  suggested_question text [not null]
 
   indexes {
     (request_analysis_run_id, item_order) [unique, name: 'uk_request_analysis_items_order']
